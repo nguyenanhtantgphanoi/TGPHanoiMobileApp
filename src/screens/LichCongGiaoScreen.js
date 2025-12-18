@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, ImageBackground, StyleSheet, Dimensions, StatusBar } from "react-native";
+import { View, Text, ImageBackground, StyleSheet, Dimensions, StatusBar, Image } from "react-native";
 import { GestureDetector, Gesture } from "react-native-gesture-handler";
 import Animated, {
     useSharedValue,
@@ -9,6 +9,7 @@ import Animated, {
     useDerivedValue,
 } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
+import renderAoLe from "../utils/renderAoLe";
 
 const { width } = Dimensions.get("window");
 
@@ -139,8 +140,9 @@ export default function LichCongGiaoScreen() {
 
                         <View style={styles.mauAoContainer}>
                             <Text style={styles.mauAoLabel}>Áo Lễ:</Text>
-                            <View style={[styles.mauAoIndicator, { backgroundColor: item.color.toLowerCase() }]} />
-                            <Text style={styles.mauAoText}>{item.mauAo}</Text>
+                            <Image source={renderAoLe(item.color)} style={{ width: 40, height: 40, borderRadius: 8 }} />
+                            {/* <View style={[styles.mauAoIndicator, { backgroundColor: item.color.toLowerCase() }]} /> */}
+                            {/* <Text style={styles.mauAoText}>{item.mauAo}</Text> */}
                         </View>
 
                         <Text style={styles.label}>Trích Sách Tin Mừng:</Text>

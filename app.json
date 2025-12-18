@@ -13,14 +13,16 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.application.tgphn"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon-tgp.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.application.tgphn"
     },
     "web": {
       "favicon": "./assets/favicon.png"
