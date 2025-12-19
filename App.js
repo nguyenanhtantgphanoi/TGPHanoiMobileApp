@@ -12,6 +12,7 @@ import GiaoXuScreen from './src/screens/GiaoXuScreen';
 import GiaoHatScreen from './src/screens/GiaoHatScreen';
 import KinhCacThanhTuDaoScreen from './src/screens/KinhCacThanhTuDaoScreen';
 import ChiTietKinhScreen from './src/screens/ChiTietKinhScreen';
+import GXDetailScreen from './src/screens/GXDetailScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -27,6 +28,7 @@ function MainApp() {
         <Stack.Screen name="LMScreen" component={LMScreen} />
         <Stack.Screen name="GiaoXuScreen" component={GiaoXuScreen} />
         <Stack.Screen name="GiaoHatScreen" component={GiaoHatScreen} />
+        <Stack.Screen name="GXDetailScreen" component={GXDetailScreen} />
         <Stack.Screen
           name="KinhCacThanhTuDao"
           component={KinhCacThanhTuDaoScreen}
