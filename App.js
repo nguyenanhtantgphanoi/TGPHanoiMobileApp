@@ -8,6 +8,8 @@ import { StatusBar } from 'expo-status-bar';
 import HomeBottomTabNavigator from './src/navigators/HomeBottomTabNavigator';
 import InfoScreen from './src/screens/InfoScreen';
 import LMScreen from './src/screens/LMScreen';
+import GiaoXuScreen from './src/screens/GiaoXuScreen';
+import GiaoHatScreen from './src/screens/GiaoHatScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -21,12 +23,8 @@ function MainApp() {
         <Stack.Screen name="HomeBottomTabNavigator" component={HomeBottomTabNavigator} />
         <Stack.Screen name="InfoScreen" component={InfoScreen} />
         <Stack.Screen name="LMScreen" component={LMScreen} />
-        {/* <Stack.Screen name="LMScreen" component={LMScreen} />
-        <Stack.Screen name="GiaoHatScreen" component={GiaoHatScreen} />
         <Stack.Screen name="GiaoXuScreen" component={GiaoXuScreen} />
-        <Stack.Screen name="GXDetailScreen" component={GXDetailScreen} />
-        <Stack.Screen name="SettingScreen" component={SettingScreen} />
-        <Stack.Screen name="InfoScreen" component={InfoScreen} /> */}
+        <Stack.Screen name="GiaoHatScreen" component={GiaoHatScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

@@ -144,7 +144,7 @@ export default function LMScreen() {
                     tabBarLabelStyle: { fontSize: 14, fontWeight: 'bold' },
                 }}
             >
-                <Tab.Screen name="Linh mục đoàn">
+                <Tab.Screen name="Linh mục triều">
                     {() => <LinhMucGiaoPhanScreen data={filteredData} />}
                 </Tab.Screen>
                 <Tab.Screen name="Linh mục dòng">
