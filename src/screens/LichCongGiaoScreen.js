@@ -139,7 +139,7 @@ export default function LichCongGiaoScreen() {
                         <Text style={styles.leText}>{item.le}</Text>
 
                         <View style={styles.mauAoContainer}>
-                            <Text style={styles.mauAoLabel}>Áo Lễ:</Text>
+                            {/* <Text style={styles.mauAoLabel}>Áo Lễ:</Text> */}
                             <Image source={renderAoLe(item.color)} style={{ width: 40, height: 40, borderRadius: 8 }} />
                             {/* <View style={[styles.mauAoIndicator, { backgroundColor: item.color.toLowerCase() }]} /> */}
                             {/* <Text style={styles.mauAoText}>{item.mauAo}</Text> */}
