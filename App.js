@@ -1,71 +1,33 @@
-import { Ionicons } from '@expo/vector-icons';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+
+
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { View, Text } from 'react-native';
-import LichCongGiaoScreen from './src/screens/LichCongGiaoScreen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import NewsScreen from './src/screens/NewsScreen';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { StatusBar } from 'expo-status-bar';
+import HomeBottomTabNavigator from './src/navigators/HomeBottomTabNavigator';
+import InfoScreen from './src/screens/InfoScreen';
+import LMScreen from './src/screens/LMScreen';
 
-function TinTucScreen() {
-  return (
-    <View className="flex-1 items-center justify-center bg-white">
-      <Text className="text-lg">Tin Tức</Text>
-    </View>
-  );
-}
-
-function KinhNguyenScreen() {
-  return (
-    <View className="flex-1 items-center justify-center bg-white">
-      <Text className="text-lg">Kinh Nguyện</Text>
-    </View>
-  );
-}
-
-function DanhMucScreen() {
-  return (
-    <View className="flex-1 items-center justify-center bg-white">
-      <Text className="text-lg">Danh Mục</Text>
-    </View>
-  );
-}
-
-const Tab = createBottomTabNavigator();
+const Stack = createNativeStackNavigator();
 
 function MainApp() {
-  const insets = useSafeAreaInsets();
+
 
   return (
     <NavigationContainer>
-      <Tab.Navigator
-        screenOptions={({ route }) => ({
-          headerShown: false,
-          tabBarActiveTintColor: '#007AFF',
-          tabBarInactiveTintColor: '#8e8e93',
-          tabBarStyle: {
-            backgroundColor: '#f9f9f9',
-            height: 50 + insets.bottom,
-            paddingBottom: 6 + insets.bottom,
-            paddingTop: 8,
-          },
-          tabBarIcon: ({ color }) => {
-            let iconName;
-            if (route.name === 'Lịch') iconName = 'calendar-outline';
-            else if (route.name === 'Tin tức') iconName = 'newspaper-outline';
-            else if (route.name === 'Kinh nguyện') iconName = 'book-outline';
-            else if (route.name === 'Danh mục') iconName = 'menu-outline';
-            return <Ionicons name={iconName} size={24} color={color} />;
-          },
-        })}
-      >
-        <Tab.Screen name="Lịch" options={{
-          title: "Lịch Công giáo"
-        }} component={LichCongGiaoScreen} />
-        <Tab.Screen name="Tin tức" component={NewsScreen} />
-        <Tab.Screen name="Kinh nguyện" component={KinhNguyenScreen} />
-        <Tab.Screen name="Danh mục" component={DanhMucScreen} />
-      </Tab.Navigator>
+      <StatusBar translucent style='auto' />
+      <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName='HomeBottomTabNavigator'>
+        <Stack.Screen name="HomeBottomTabNavigator" component={HomeBottomTabNavigator} />
+        <Stack.Screen name="InfoScreen" component={InfoScreen} />
+        <Stack.Screen name="LMScreen" component={LMScreen} />
+        {/* <Stack.Screen name="LMScreen" component={LMScreen} />
+        <Stack.Screen name="GiaoHatScreen" component={GiaoHatScreen} />
+        <Stack.Screen name="GiaoXuScreen" component={GiaoXuScreen} />
+        <Stack.Screen name="GXDetailScreen" component={GXDetailScreen} />
+        <Stack.Screen name="SettingScreen" component={SettingScreen} />
+        <Stack.Screen name="InfoScreen" component={InfoScreen} /> */}
+      </Stack.Navigator>
     </NavigationContainer>
   );
 }
