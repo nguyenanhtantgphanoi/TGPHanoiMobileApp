@@ -9,6 +9,6 @@ export default function renderAoLe(mauAo) {
         case 'pink':
             return require('../../assets/images/ao-hong.png');
         default:
-            return require('../../assets/images/ao-trang.png');
+            return require('../../assets/images/ao-xanh.png');
     }
 }
