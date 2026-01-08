@@ -37,7 +37,7 @@ export default function KinhCacThanhTuDaoScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <Text style={styles.header}>
-        Kính các thánh tử đạo quê hương TGP Hà Nội
+        Kinh Phụng Vụ thánh tử đạo quê hương TGP Hà Nội
       </Text>
 
       <FlatList

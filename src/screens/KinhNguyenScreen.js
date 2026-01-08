@@ -24,7 +24,7 @@ export default function KinhNguyenScreen({ navigation }) {
                 >
                     <View style={styles.cardContent}>
                         <Text style={styles.cardTitle}>
-                            Kinh kính các thánh tử đạo quê hương TGP Hà Nội
+                            Kinh Phụng Vụ các thánh tử đạo quê hương TGP Hà Nội
                         </Text>
                         <Text style={styles.arrow}>›</Text>
                     </View>
