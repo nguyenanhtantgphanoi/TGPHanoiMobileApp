@@ -1,10 +1,9 @@
-import { StyleSheet, Text, View } from 'react-native'
-import React from 'react'
+import { StyleSheet } from 'react-native'
+import React, { useRef } from 'react'
 import NewsScreen from '../screens/NewsScreen';
 import KinhNguyenScreen from '../screens/KinhNguyenScreen';
 import ExtendScreen from '../screens/ExtendScreen';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import HomeScreen from '../screens/HomeScreen';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import LichCongGiaoScreen from '../screens/LichCongGiaoScreen';
@@ -13,6 +12,8 @@ const Tab = createBottomTabNavigator();
 
 export default function HomeBottomTabNavigator() {
     const insets = useSafeAreaInsets();
+    const lichScreenRef = useRef(null);
+
     return (
         <Tab.Navigator
             screenOptions={({ route }) => ({
@@ -35,9 +36,19 @@ export default function HomeBottomTabNavigator() {
                 },
             })}
         >
-            <Tab.Screen name="Lịch" options={{
-                title: "Lịch Công giáo"
-            }} component={LichCongGiaoScreen} />
+            <Tab.Screen
+                name="Lịch"
+                options={{ title: "Lịch Công giáo" }}
+                listeners={({ navigation }) => ({
+                    tabPress: (e) => {
+                        if (navigation.isFocused()) {
+                            lichScreenRef.current?.goToToday();
+                        }
+                    },
+                })}
+            >
+                {() => <LichCongGiaoScreen ref={lichScreenRef} />}
+            </Tab.Screen>
             <Tab.Screen name="Tin tức" component={NewsScreen} />
             <Tab.Screen name="Kinh nguyện" component={KinhNguyenScreen} />
             <Tab.Screen name="Danh mục" component={ExtendScreen} />

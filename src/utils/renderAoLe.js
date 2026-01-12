@@ -1,12 +1,12 @@
 export default function renderAoLe(mauAo) {
     switch (mauAo) {
-        case 'white':
+        case 'Trắng':
             return require('../../assets/images/ao-trang.png');
-        case 'red':
+        case 'Đỏ':
             return require('../../assets/images/ao-do.png');
-        case 'purple':
+        case 'Tím':
             return require('../../assets/images/ao-tim.png');
-        case 'pink':
+        case 'Hồng':
             return require('../../assets/images/ao-hong.png');
         default:
             return require('../../assets/images/ao-xanh.png');
