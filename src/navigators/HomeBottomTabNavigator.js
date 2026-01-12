@@ -18,7 +18,7 @@ export default function HomeBottomTabNavigator() {
         <Tab.Navigator
             screenOptions={({ route }) => ({
                 headerShown: false,
-                tabBarActiveTintColor: '#007AFF',
+                tabBarActiveTintColor: '#d59d2c',
                 tabBarInactiveTintColor: '#8e8e93',
                 tabBarStyle: {
                     backgroundColor: '#f9f9f9',

@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useRef, useImperativeHandle, forwardRef } from 'react';
-import { ImageBackground, StyleSheet, Text, View, ActivityIndicator, Dimensions, Image, TouchableOpacity, Modal, ScrollView, SafeAreaView } from 'react-native';
+import { ImageBackground, StyleSheet, Text, View, ActivityIndicator, Dimensions, Image, TouchableOpacity, Modal, ScrollView } from 'react-native';
 import PagerView from 'react-native-pager-view';
 import axios from 'axios';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Solar } from 'lunar-javascript';
 import renderAoLe from '../utils/renderAoLe';
 

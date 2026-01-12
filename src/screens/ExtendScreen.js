@@ -15,6 +15,11 @@ const menuItems = [
         screen: 'InfoScreen'
     },
     {
+        icon: 'scroll',
+        label: 'Văn kiện hậu Công nghị',
+        screen: 'LMScreen'
+    },
+    {
         icon: 'user-friends',
         label: 'Danh sách linh mục',
         screen: 'LMScreen'
