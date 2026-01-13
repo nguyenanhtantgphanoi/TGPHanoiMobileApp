@@ -133,7 +133,7 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
                                     <View style={styles.tag}><Text style={styles.tagText}>Lễ {le.bac_le}</Text></View>
                                 </View>
                                 <View style={styles.summaryContainer}>
-                                    <Text style={styles.summaryText}>
+                                    <Text style={[styles.summaryText, { fontSize: 16 }]}>
                                         <Text style={styles.highlightText}>
                                             {le.ban_van?.bd1_le_trich_tu?.trim() || item.bd_1}
                                             {le.ban_van?.bd2_trich_tu ? `; ${le.ban_van.bd2_trich_tu.trim()}` : (item.bd_2 ? `; ${item.bd_2}` : "")}
@@ -141,7 +141,9 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
                                         </Text>
                                     </Text>
                                 </View>
-                                <Text style={[styles.highlightText, { marginTop: 10, fontStyle: 'italic', textAlign: 'center', fontSize: 13 }]}>
+
+
+                                <Text style={[styles.highlightText, { marginTop: 10, fontStyle: 'italic', textAlign: 'center', fontSize: 16 }]}>
                                     {le.ban_van?.cau_phuc_am_tom_gon || (item.cau_loi_chua ? `"${item.cau_loi_chua}"` : "")}
                                 </Text>
                             </TouchableOpacity>
