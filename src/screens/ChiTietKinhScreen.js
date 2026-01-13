@@ -78,7 +78,7 @@ export default function ChiTietKinhScreen({ route }) {
                             p: {
                                 fontSize: 20,
                                 lineHeight: 30,
-                                marginBottom: 10,
+                                marginBottom: 10 ,
                                 marginTop:0,
                                 
                             },
