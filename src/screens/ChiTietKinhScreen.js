@@ -76,12 +76,14 @@ export default function ChiTietKinhScreen({ route }) {
                         enableCSSInlineProcessing
                         tagsStyles={{
                             p: {
-                                fontSize: 16,
-                                lineHeight: 26,
+                                fontSize: 20,
+                                lineHeight: 30,
                                 marginBottom: 10,
+                                marginTop:0,
+                                
                             },
                             div: {
-                                marginBottom: 10,
+                                marginBottom: 5,
                             },
                             h2: {
                                 fontSize: 18,
@@ -95,13 +97,15 @@ export default function ChiTietKinhScreen({ route }) {
                             },
                             strong: {
                                 fontWeight: "bold",
+                                // marginBottom: 0
                             },
                             span: {
-                                marginBottom: 10,
+                                marginBottom: 0,
                                 display: "flex",
                             },
                             br: {
-                                height: 10,
+                                height: 0,
+                                marginBottom: 0
                             },
                         }}
                         defaultTextProps={{

@@ -40,7 +40,7 @@ function MainApp() {
         />
         <Stack.Screen
           name="VanKienCongNghiScreen"
-          component={VanKienCongNghiScreen}
+          component={VanKienCongNghiScreen }
         />
       </Stack.Navigator>
     </NavigationContainer>
