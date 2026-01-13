@@ -17,7 +17,7 @@ const menuItems = [
     {
         icon: 'scroll',
         label: 'Văn kiện hậu Công nghị',
-        screen: 'LMScreen'
+        screen: 'VanKienCongNghiScreen'
     },
     {
         icon: 'user-friends',
