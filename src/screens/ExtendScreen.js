@@ -34,11 +34,11 @@ const menuItems = [
         label: 'Danh sách giáo hạt',
         screen: 'GiaoHatScreen'
     },
-    {
-        icon: 'cog',
-        label: 'Cài đặt',
-        screen: 'SettingScreen'
-    },
+    // {
+    //     icon: 'cog',
+    //     label: 'Cài đặt',
+    //     screen: 'SettingScreen'
+    // },
 
 ];
 
