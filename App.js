@@ -23,7 +23,7 @@ function MainApp() {
   useEffect(() => {
     registerForPushNotifications().then(deviceInfo => {
       if (!deviceInfo) return;
-      fetch('http://192.168.100.48:6789/notification/register-push-device', {
+      fetch('https://service-tgphn.lamgs.io.vn/notification/register-push-device', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
