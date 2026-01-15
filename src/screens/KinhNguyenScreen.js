@@ -1,4 +1,5 @@
-import React from "react";
+import axios from "axios";
+import React, { use, useEffect, useState } from "react";
 import {
     StyleSheet,
     Text,
@@ -8,29 +9,51 @@ import {
 } from "react-native";
 
 export default function KinhNguyenScreen({ navigation }) {
+    const [listKinhNguyen, setListKinhNguyen] = useState([])
+    useEffect(() => {
+        const getListKinhnguyen = async () => {
+            try {
+                const response = await axios.get('https://service-tgphn.lamgs.io.vn/get-kinh-nguyen');
+                const data = response.data;
+                setListKinhNguyen(data)
+            } catch (error) {
+                console.log("Có lỗi khi get list kinh nguyện: ", error)
+            }
+        }
+        getListKinhnguyen()
+    }, []);
     return (
         <View style={styles.container}>
-            {/* Header */}
             <Text style={styles.header}>Kinh nguyện</Text>
-
-            {/* Scrollable content */}
             <ScrollView
                 contentContainerStyle={styles.list}
                 showsVerticalScrollIndicator={false}
             >
-                <TouchableOpacity
-                    style={styles.card}
-                    onPress={() => navigation.navigate("KinhCacThanhTuDao")}
-                >
-                    <View style={styles.cardContent}>
-                        <Text style={styles.cardTitle}>
-                            Kinh Phụng Vụ các thánh tử đạo quê hương TGP Hà Nội
-                        </Text>
-                        <Text style={styles.arrow}>›</Text>
-                    </View>
-                </TouchableOpacity>
+                {
+                    listKinhNguyen.map((kinhnguyen) => (
+                        <TouchableOpacity
+                            key={kinhnguyen._id}
+                            style={styles.card}
+                            onPress={() =>
+                                navigation.navigate("ChiTietKinh", {
+                                    title: kinhnguyen.title,
+                                    // contentId: kinhnguyen.id,
+                                    type: null,
+                                    html: kinhnguyen.html
+                                })
+                            }
+                        >
+                            <View style={styles.cardContent}>
+                                <Text style={styles.cardTitle}>
+                                    {kinhnguyen.title}
+                                </Text>
+                                <Text style={styles.arrow}>›</Text>
+                            </View>
+                        </TouchableOpacity>
+                    ))
+                }
 
-                <TouchableOpacity style={styles.card} onPress={() => navigation.navigate("ChiTietKinh", { title: "Các kinh đọc sáng tối ngày thường và Chúa Nhật", contentId: null, type: 1 })}>
+                {/* <TouchableOpacity style={styles.card} onPress={() => navigation.navigate("ChiTietKinh", { title: "Các kinh đọc sáng tối ngày thường và Chúa Nhật", contentId: null, type: 1 })}>
                     <View style={styles.cardContent}>
                         <Text style={styles.cardTitle}>
                             Các kinh đọc sáng tối ngày thường và Chúa Nhật
@@ -71,7 +94,7 @@ export default function KinhNguyenScreen({ navigation }) {
                         </Text>
                         <Text style={styles.arrow}>›</Text>
                     </View>
-                </TouchableOpacity>
+                </TouchableOpacity> */}
             </ScrollView>
         </View>
     );

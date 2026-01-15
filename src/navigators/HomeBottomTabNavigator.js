@@ -7,6 +7,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import LichCongGiaoScreen from '../screens/LichCongGiaoScreen';
+import CacNghiThucScreen from '../screens/CacNghiThucScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -32,6 +33,7 @@ export default function HomeBottomTabNavigator() {
                     else if (route.name === 'Tin tức') iconName = 'newspaper-outline';
                     else if (route.name === 'Kinh nguyện') iconName = 'book-outline';
                     else if (route.name === 'Danh mục') iconName = 'menu-outline';
+                    else if (route.name === 'Các nghi thức') iconName = 'library-outline';
                     return <Ionicons name={iconName} size={24} color={color} />;
                 },
             })}
@@ -50,6 +52,7 @@ export default function HomeBottomTabNavigator() {
                 {() => <LichCongGiaoScreen ref={lichScreenRef} />}
             </Tab.Screen>
             <Tab.Screen name="Tin tức" component={NewsScreen} />
+            <Tab.Screen name="Các nghi thức" component={CacNghiThucScreen} />
             <Tab.Screen name="Kinh nguyện" component={KinhNguyenScreen} />
             <Tab.Screen name="Danh mục" component={ExtendScreen} />
         </Tab.Navigator>

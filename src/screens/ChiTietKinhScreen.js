@@ -1,119 +1,158 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
     View,
     ScrollView,
     Text,
-    ActivityIndicator,
+    TouchableOpacity,
     useWindowDimensions,
+    StatusBar,
 } from "react-native";
 import RenderHTML from "react-native-render-html";
-import axios from "axios";
 import { SafeAreaView } from "react-native-safe-area-context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useIsFocused } from "@react-navigation/native"; // Cần thiết để đồng bộ
 
+/* ================= CONSTANT (DÙNG CHUNG) ================= */
+const FONT_SCALE_KEY = "@kinh_font_scale";
+const DARK_MODE_KEY = "@kinh_dark_mode";
+
+/* ================= UTILS ================= */
+const extractBodyHTML = (html) => {
+    if (!html) return "";
+    const match = html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+    return match ? match[1] : html;
+};
+
+/* ================= SCREEN ================= */
 export default function ChiTietKinhScreen({ route }) {
-    const { title, contentId, type } = route.params;
-    const [html, setHtml] = useState("");
-    const [loading, setLoading] = useState(true);
+    const { html } = route.params;
     const { width } = useWindowDimensions();
+    const isFocused = useIsFocused(); // Theo dõi trạng thái màn hình
 
-    useEffect(() => {
-        let url;
-        if (!type) {
-            url = `https://news-tgphn.lamgs.io.vn/kinhNguyen/chiTietKinhNguyen/${contentId}`;
-        } else {
-            url = `https://news-tgphn.lamgs.io.vn/kinhNguyen/chiTietKinhNguyen/${contentId}?type=${type}`;
+    const [fontScale, setFontScale] = useState(1);
+    const [darkMode, setDarkMode] = useState(false);
+    const [ready, setReady] = useState(false);
+
+    /* ========== LOAD & SYNC SETTINGS ========== */
+    const loadSettings = async () => {
+        try {
+            const savedFont = await AsyncStorage.getItem(FONT_SCALE_KEY);
+            const savedDark = await AsyncStorage.getItem(DARK_MODE_KEY);
+
+            if (savedFont) setFontScale(parseFloat(savedFont));
+            if (savedDark) setDarkMode(savedDark === "true");
+        } catch (err) {
+            console.log("Load setting error", err);
+        } finally {
+            setReady(true);
         }
+    };
 
-        setLoading(true);
+    // Load khi vào màn hình hoặc khi màn hình được quay lại (focus)
+    useEffect(() => {
+        if (isFocused) {
+            loadSettings();
+        }
+    }, [isFocused]);
 
-        axios
-            .get(url)
-            .then((res) => {
-                if (res.data.success) {
-                    setHtml(res.data.data);
-                }
-            })
-            .catch((err) => {
-                console.error("Lỗi load chi tiết kinh:", err);
-            })
-            .finally(() => {
-                setLoading(false);
-            });
-    }, [contentId, type]);
+    /* ========== SAVE SETTINGS ========== */
+    const updateFontScale = (scale) => {
+        const newScale = Math.max(0.8, Math.min(1.8, scale));
+        setFontScale(newScale);
+        AsyncStorage.setItem(FONT_SCALE_KEY, newScale.toString());
+    };
+
+    const toggleDarkMode = () => {
+        const nextMode = !darkMode;
+        setDarkMode(nextMode);
+        AsyncStorage.setItem(DARK_MODE_KEY, nextMode.toString());
+    };
+
+    const bodyHtml = useMemo(() => extractBodyHTML(html), [html]);
+
+    /* ========== THEME ========== */
+    const colors = useMemo(
+        () => ({
+            bg: darkMode ? "#121212" : "#FFFFFF",
+            text: darkMode ? "#EAEAEA" : "#000000",
+            title: darkMode ? "#FFB3B3" : "#8B0000",
+            controlBg: darkMode ? "#1E1E1E" : "#F4F4F4",
+            border: darkMode ? "#333" : "#DDD",
+        }),
+        [darkMode]
+    );
+
+    /* ========== HTML STYLES ========== */
+    const tagsStyles = useMemo(
+        () => ({
+            body: { color: colors.text },
+            h1: { fontSize: 22 * fontScale, fontWeight: "bold", textAlign: "center", marginBottom: 16, color: colors.title },
+            h2: { fontSize: 18 * fontScale, fontWeight: "bold", marginVertical: 10, color: colors.title },
+            h3: { fontSize: 17 * fontScale, fontWeight: "bold", marginVertical: 8, color: colors.title },
+            h4: { fontSize: 16 * fontScale, fontWeight: "bold", marginVertical: 6, color: colors.title },
+            p: { fontSize: 18 * fontScale, lineHeight: 30 * fontScale, marginBottom: 10, color: colors.text },
+            em: { fontStyle: "italic", color: colors.text },
+            strong: { fontWeight: "bold", color: colors.text },
+            hr: { borderColor: colors.title },
+        }),
+        [fontScale, colors]
+    );
+
+    if (!ready) return null;
 
     return (
-        <View style={{ flex: 1, backgroundColor: "#fff" }}>
-            {/* Header */}
-            <SafeAreaView edges={["top"]} style={{ backgroundColor: "#fff" }}>
-                <Text
-                    style={{
-                        fontSize: 22,
-                        fontWeight: "bold",
-                        paddingHorizontal: 16,
-                        paddingBottom: 12,
-                    }}
-                >
-                    {title}
-                </Text>
-            </SafeAreaView>
+        <View style={{ flex: 1, backgroundColor: colors.bg }}>
+            <StatusBar
+                barStyle={darkMode ? "light-content" : "dark-content"}
+                backgroundColor={colors.bg}
+            />
 
-            {/* Loading */}
-            {loading ? (
-                <View
-                    style={{
-                        flex: 1,
-                        justifyContent: "center",
-                        alignItems: "center",
-                    }}
-                >
-                    <ActivityIndicator size="large" color="#c62828" />
+            <SafeAreaView edges={["top"]} style={{ backgroundColor: colors.bg }} />
+
+            {/* ========== CONTROL BAR (ĐỒNG BỘ) ========== */}
+            <View
+                style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    paddingHorizontal: 16,
+                    paddingVertical: 10,
+                    backgroundColor: colors.controlBg,
+                    borderBottomWidth: 1,
+                    borderBottomColor: colors.border,
+                }}
+            >
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
+                    <TouchableOpacity onPress={() => updateFontScale(fontScale - 0.1)}>
+                        <Text style={{ fontSize: 18, color: colors.text }}>A−</Text>
+                    </TouchableOpacity>
+
+                    <Text style={{ marginHorizontal: 12, color: colors.text, fontSize: 14 }}>
+                        {Math.round(fontScale * 100)}%
+                    </Text>
+
+                    <TouchableOpacity onPress={() => updateFontScale(fontScale + 0.1)}>
+                        <Text style={{ fontSize: 18, color: colors.text }}>A+</Text>
+                    </TouchableOpacity>
                 </View>
-            ) : (
-                <ScrollView contentContainerStyle={{ padding: 16 }}>
-                    <RenderHTML
-                        contentWidth={width}
-                        source={{ html }}
-                        enableCSSInlineProcessing
-                        tagsStyles={{
-                            p: {
-                                fontSize: 20,
-                                lineHeight: 30,
-                                marginBottom: 10 ,
-                                marginTop:0,
-                                
-                            },
-                            div: {
-                                marginBottom: 5,
-                            },
-                            h2: {
-                                fontSize: 18,
-                                fontWeight: "bold",
-                                marginVertical: 10,
-                            },
-                            h3: {
-                                fontSize: 17,
-                                fontWeight: "bold",
-                                marginVertical: 10,
-                            },
-                            strong: {
-                                fontWeight: "bold",
-                                // marginBottom: 0
-                            },
-                            span: {
-                                marginBottom: 0,
-                                display: "flex",
-                            },
-                            br: {
-                                height: 0,
-                                marginBottom: 0
-                            },
-                        }}
-                        defaultTextProps={{
-                            selectable: true,
-                        }}
-                    />
-                </ScrollView>
-            )}
+
+                <TouchableOpacity onPress={toggleDarkMode}>
+                    <Text style={{ fontSize: 18 }}>{darkMode ? "🌙" : "☀️"}</Text>
+                </TouchableOpacity>
+            </View>
+
+            {/* ========== CONTENT ========== */}
+            <ScrollView contentContainerStyle={{ padding: 16 }}>
+                <RenderHTML
+                    contentWidth={width}
+                    source={{ html: bodyHtml }}
+                    ignoredDomTags={["head", "style", "meta", "link"]}
+                    enableCSSInlineProcessing={false}
+                    tagsStyles={tagsStyles}
+                    baseStyle={{ color: colors.text, backgroundColor: colors.bg }}
+                    defaultTextProps={{ selectable: true }}
+                />
+            </ScrollView>
         </View>
     );
 }
