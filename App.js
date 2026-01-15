@@ -1,5 +1,5 @@
 
-
+import './src/utils/notificationConfig'
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -14,11 +14,24 @@ import KinhCacThanhTuDaoScreen from './src/screens/KinhCacThanhTuDaoScreen';
 import ChiTietKinhScreen from './src/screens/ChiTietKinhScreen';
 import GXDetailScreen from './src/screens/GXDetailScreen';
 import VanKienCongNghiScreen from './src/screens/VanKienCongNghiScreen';
+import { registerForPushNotifications } from './src/utils/pushToken';
+import { useEffect } from 'react';
 
 const Stack = createNativeStackNavigator();
 
 function MainApp() {
-
+  useEffect(() => {
+    registerForPushNotifications().then(deviceInfo => {
+      if (!deviceInfo) return;
+      fetch('http://192.168.100.48:6789/notification/register-push-device', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...deviceInfo,
+        }),
+      });
+    });
+  }, []);
 
   return (
     <NavigationContainer>
@@ -40,7 +53,7 @@ function MainApp() {
         />
         <Stack.Screen
           name="VanKienCongNghiScreen"
-          component={VanKienCongNghiScreen }
+          component={VanKienCongNghiScreen}
         />
       </Stack.Navigator>
     </NavigationContainer>
