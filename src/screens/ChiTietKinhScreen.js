@@ -106,7 +106,7 @@ export default function ChiTietKinhScreen({ route }) {
             indent: {marginHorizontal: 10},
             red: {color: '#ff0000'},
             italic: {fontStyle:"italic"},
-            exception: {backgroundColor: '#e0e0e0d8'}
+            exception: {backgroundColor: '#e0e0e0d8', padding: 10}
         }),
         [fontScale, colors]
     );
