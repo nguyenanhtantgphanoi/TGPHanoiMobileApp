@@ -93,11 +93,23 @@ export default function ChiTietKinhScreen({ route }) {
             p: { fontSize: 18 * fontScale, lineHeight: 30 * fontScale, marginBottom: 10, color: colors.text },
             em: { fontStyle: "italic", color: colors.text },
             strong: { fontWeight: "bold", color: colors.text },
-            hr: { borderColor: colors.title },
+            hr: { borderColor: colors.title, borderBottomWidth: 5, margin: 30 },
         }),
         [fontScale, colors]
     );
-
+    const classesStyles = useMemo(
+        () => ({
+            speaker: {fontWeight: 'bold', color: '#8B0000'},
+            dialogue:{marginVertical: 10},
+            sign: {fontWeight: 'bold'},
+            divider: {textAlign: 'center', marginVertical: 30, fontWeight: 'bold'},
+            indent: {marginHorizontal: 10},
+            red: {color: '#ff0000'},
+            italic: {fontStyle:"italic"},
+            exception: {backgroundColor: '#e0e0e0d8', padding: 10}
+        }),
+        [fontScale, colors]
+    );
     if (!ready) return null;
 
     return (
@@ -149,6 +161,7 @@ export default function ChiTietKinhScreen({ route }) {
                     ignoredDomTags={["head", "style", "meta", "link"]}
                     enableCSSInlineProcessing={false}
                     tagsStyles={tagsStyles}
+                    classesStyles={classesStyles}
                     baseStyle={{ color: colors.text, backgroundColor: colors.bg }}
                     defaultTextProps={{ selectable: true }}
                 />
