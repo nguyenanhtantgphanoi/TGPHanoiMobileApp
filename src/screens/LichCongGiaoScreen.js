@@ -10,7 +10,6 @@ import {
     TouchableOpacity,
     Modal,
     ScrollView,
-    FlatList,
     StatusBar,
     useWindowDimensions
 } from 'react-native';
@@ -28,24 +27,11 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import RenderHTML from "react-native-render-html";
 import { useIsFocused } from '@react-navigation/native';
+import MonthCalendarModal from '../components/MonthCalendarModal';
 
 const { width, height } = Dimensions.get('window');
-
-/* ================= CONSTANT (DÙNG CHUNG VỚI FILE KINH) ================= */
 const FONT_SCALE_KEY = "@kinh_font_scale";
 const DARK_MODE_KEY = "@kinh_dark_mode";
-
-const mapColor = (colorName) => {
-    switch (colorName) {
-        case 'Tím': return '#8e44ad';
-        case 'Trắng': return '#ecf0f1';
-        case 'Đỏ': return '#e74c3c';
-        case 'Xanh': return '#27ae60';
-        case 'Vàng': return '#f1c40f';
-        case 'Hồng': return '#ff9ff3';
-        default: return 'transparent';
-    }
-};
 
 const GENERATED_MONTHS = [];
 for (let y = 2025; y <= 2026; y++) {
@@ -57,13 +43,11 @@ for (let y = 2025; y <= 2026; y++) {
     }
 }
 
-// BỌC DAYCARD TRONG MEMO ĐỂ GIỮ NGUYÊN TRẠNG THÁI KHI MODAL MỞ
 const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible }) => {
     const dateObj = new Date(item.date);
     const daysOfWeek = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
     const solar = Solar.fromYmd(dateObj.getFullYear(), dateObj.getMonth() + 1, dateObj.getDate());
     const lunar = solar.getLunar();
-
     const listLe = useMemo(() => item.arr_cac_le?.length ? item.arr_cac_le : [item], [item.arr_cac_le, item]);
     const [activeLeIndex, setActiveLeIndex] = useState(0);
 
@@ -79,69 +63,41 @@ const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible }) => {
                     <Text style={styles.lunarText}>Lịch âm: <Text style={styles.lunarDateHighlight}>{lunar.getDay()}/{lunar.getMonth()}</Text></Text>
                 </View>
             </View>
-
             <View style={[styles.bottomBlock, { marginBottom: 60 }]}>
-                <PagerView
-                    style={styles.pagerLe}
-                    initialPage={0}
-                    onPageSelected={e => setActiveLeIndex(e.nativeEvent.position)}
-                >
-                    {listLe.map((le, idx) => (
-                        <TouchableOpacity
-                            key={`le-sub-item-${idx}`}
-                            activeOpacity={0.9}
-                            onPress={() => {
-                                setSelectedLe(le);
-                                setModalVisible(true);
-                            }}
-                            style={styles.lePage}
-                        >
-                            <Text style={styles.titleText}>{le.title}</Text>
-                            <View style={styles.infoRow}>
-                                <Image source={renderAoLe(le.mau_ao_le)} style={styles.aoLeIcon} />
-                                <View style={styles.tag}><Text style={styles.tagText}>Lễ {le.bac_le}</Text></View>
-                            </View>
-                            <View style={styles.summaryContainer}>
-                                <Text style={[styles.summaryText, { fontSize: 16 }]}>
-                                    <Text style={styles.highlightText}>
-                                        {le.ban_van?.bd1_le_trich_tu?.trim() || item.bd_1}
-                                        {le.ban_van?.bd2_trich_tu ? `; ${le.ban_van.bd2_trich_tu.trim()}` : item.bd_2 ? `; ${item.bd_2}` : ""}
-                                        {le.ban_van?.phuc_am_trich_tu ? `; ${le.ban_van.phuc_am_trich_tu.trim()}` : item.tin_mung ? `; ${item.tin_mung}` : ""}
-                                    </Text>
-                                </Text>
-                            </View>
-                            <Text style={[styles.highlightText, { marginTop: 10, fontStyle: 'italic', textAlign: 'center', fontSize: 16 }]}>
-                                {le.ban_van?.cau_phuc_am_tom_gon || (item.cau_loi_chua ? `"${item.cau_loi_chua}"` : "")}
-                            </Text>
-                        </TouchableOpacity>
-                    ))}
-                </PagerView>
+                <PagerView style={styles.pagerLe} initialPage={0} onPageSelected={e => setActiveLeIndex(e.nativeEvent.position)}>
+                    {listLe.map((le, idx) => {
+                        const displayTitle = le.title;
+                        const displayBd1 = (idx === 0 && item.bd_1) ? item.bd_1 : (le.ban_van?.bd1_le_trich_tu || le.bd_1);
+                        const displayBd2 = (idx === 0 && item.bd_2) ? item.bd_2 : (le.ban_van?.bd2_trich_tu || le.bd_2);
+                        const displayTm = (idx === 0 && item.tin_mung) ? item.tin_mung : (le.ban_van?.phuc_am_trich_tu || le.tin_mung);
 
+                        return (
+                            <TouchableOpacity key={`le-sub-item-${idx}`} activeOpacity={0.9} onPress={() => { setSelectedLe(le); setModalVisible(true); }} style={styles.lePage}>
+                                <Text style={styles.titleText}>{displayTitle}</Text>
+                                <View style={styles.infoRow}><Image source={renderAoLe(le.mau_ao_le)} style={styles.aoLeIcon} /><View style={styles.tag}><Text style={styles.tagText}>Lễ {le.bac_le}</Text></View></View>
+                                <View style={styles.summaryContainer}>
+                                    <Text style={[styles.summaryText, { fontSize: 16 }]}><Text style={styles.highlightText}>{displayBd1}{displayBd2 ? `; ${displayBd2}` : ""}{displayTm ? `; ${displayTm}` : ""}</Text></Text>
+                                </View>
+                                <Text style={[styles.highlightText, { marginTop: 10, fontStyle: 'italic', textAlign: 'center', fontSize: 16 }]}>{le.ban_van?.cau_phuc_am_tom_gon || (le.cau_loi_chua ? `"${le.cau_loi_chua}"` : "")}</Text>
+                            </TouchableOpacity>
+                        );
+                    })}
+                </PagerView>
                 {listLe.length > 1 && (
-                    <View style={styles.dotsContainer}>
-                        {listLe.map((_, i) => (
-                            <View
-                                key={`dot-${i}`}
-                                style={[
-                                    styles.dot,
-                                    activeLeIndex === i ? styles.activeDot : styles.inactiveDot
-                                ]}
-                            />
-                        ))}
-                    </View>
+                    <View style={styles.dotsContainer}>{listLe.map((_, i) => (<View key={`dot-${i}`} style={[styles.dot, activeLeIndex === i ? styles.activeDot : styles.inactiveDot]} />))}</View>
                 )}
             </View>
         </View>
     );
-}, (prev, next) => prev.item.date === next.item.date && prev.item.id === next.item.id);
+});
 
 const LichCongGiaoScreen = forwardRef((props, ref) => {
     const pagerRef = useRef(null);
     const insets = useSafeAreaInsets();
     const { width: contentWidth } = useWindowDimensions();
     const isFocused = useIsFocused();
-
     const [loading, setLoading] = useState(true);
+    const [loadingDay, setLoadingDay] = useState(false);
     const [allDays, setAllDays] = useState([]);
     const [yearData, setYearData] = useState([]);
     const [initialIndex, setInitialIndex] = useState(0);
@@ -149,13 +105,12 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
     const [selectedLe, setSelectedLe] = useState(null);
     const [monthModalVisible, setMonthModalVisible] = useState(false);
     const [monthPagerIndex, setMonthPagerIndex] = useState(0);
-
+    const [clickedDate, setClickedDate] = useState(null);
+    const [fullDayData, setFullDayData] = useState(null);
     const [fontScale, setFontScale] = useState(1);
     const [darkMode, setDarkMode] = useState(false);
 
-    useImperativeHandle(ref, () => ({
-        goToToday: () => pagerRef.current?.setPage(initialIndex)
-    }));
+    useImperativeHandle(ref, () => ({ goToToday: () => pagerRef.current?.setPage(initialIndex) }));
 
     const syncSettings = async () => {
         try {
@@ -163,22 +118,56 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
             const savedDark = await AsyncStorage.getItem(DARK_MODE_KEY);
             if (savedFont) setFontScale(parseFloat(savedFont));
             if (savedDark) setDarkMode(savedDark === "true");
-        } catch (err) { console.log("Sync error", err); }
+        } catch { }
     };
 
-    useEffect(() => {
-        if (isFocused || modalVisible) { syncSettings(); }
-    }, [isFocused, modalVisible]);
+    useEffect(() => { if (isFocused || modalVisible) syncSettings(); }, [isFocused, modalVisible]);
 
-    const saveFontScale = async (scale) => {
-        const newScale = Math.max(0.8, Math.min(1.8, scale));
-        setFontScale(newScale);
-        await AsyncStorage.setItem(FONT_SCALE_KEY, newScale.toString());
+    const fetchData = async () => {
+        try {
+            const today = new Date();
+            const res = await axios.get(`https://service-tgphn.lamgs.io.vn/get-calendar?date=${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`);
+            const data = [...(res.data.prev_month || []), ...(res.data.cur_month || []), ...(res.data.next_month || [])];
+            const idx = data.findIndex(d => d.date === `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`);
+            setAllDays(data);
+            setInitialIndex(idx !== -1 ? idx : 0);
+            setLoading(false);
+        } catch { setLoading(false); }
     };
 
-    const saveDarkMode = async (mode) => {
-        setDarkMode(mode);
-        await AsyncStorage.setItem(DARK_MODE_KEY, mode.toString());
+    const fetchYearData = async () => {
+        try {
+            const res = await axios.get('https://service-tgphn.lamgs.io.vn/get-calendar-year');
+            if (Array.isArray(res.data)) setYearData(res.data);
+        } catch { }
+    };
+
+    useEffect(() => { fetchData(); fetchYearData(); }, []);
+
+    const handleDayPress = async (date) => {
+        setClickedDate(date);
+        setLoadingDay(true);
+        try {
+            const formattedDate = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
+            const res = await axios.get(`https://service-tgphn.lamgs.io.vn/get-one-day?day=${formattedDate}`);
+            if (res.data) {
+                setFullDayData(res.data);
+            }
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setLoadingDay(false);
+        }
+    };
+
+    const onFlingUp = ({ nativeEvent }) => {
+        if (nativeEvent.state === State.ACTIVE) {
+            const today = new Date();
+            const idx = GENERATED_MONTHS.findIndex(m => m.month === today.getMonth() && m.year === today.getFullYear());
+            setMonthPagerIndex(idx !== -1 ? idx : 0);
+            handleDayPress(today);
+            setMonthModalVisible(true);
+        }
     };
 
     const modalColors = useMemo(() => ({
@@ -196,86 +185,6 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
         em: { fontStyle: "italic", color: modalColors.text }
     }), [fontScale, modalColors]);
 
-    useEffect(() => {
-        fetchData();
-        fetchYearData();
-    }, []);
-
-    const fetchData = async () => {
-        try {
-            const today = new Date();
-            const year = today.getFullYear();
-            const month = today.getMonth() + 1;
-            const day = String(today.getDate()).padStart(2, '0');
-            const formattedDate = `${year}-${month}-${day}`;
-            const res = await axios.get(`https://service-tgphn.lamgs.io.vn/get-calendar?date=${formattedDate}`);
-            const data = [...(res.data.prev_month || []), ...(res.data.cur_month || []), ...(res.data.next_month || [])];
-
-            // Tìm index ngày hôm nay dựa trên date chuỗi
-            const todayStr = `${year}-${String(month).padStart(2, '0')}-${day}`;
-            const idx = data.findIndex(d => d.date === todayStr);
-
-            setAllDays(data);
-            setInitialIndex(idx !== -1 ? idx : 0);
-            setLoading(false);
-        } catch { setLoading(false); }
-    };
-
-    const fetchYearData = async () => {
-        try {
-            const res = await axios.get('https://service-tgphn.lamgs.io.vn/get-calendar-year');
-            if (Array.isArray(res.data)) setYearData(res.data);
-        } catch (error) { console.error("Lỗi load lịch năm:", error); }
-    };
-
-    const MonthGrid = ({ month, year }) => {
-        const grid = useMemo(() => {
-            const daysInMonth = new Date(year, month + 1, 0).getDate();
-            const firstDay = new Date(year, month, 1).getDay();
-            const cells = [];
-            for (let i = 0; i < firstDay; i++) cells.push(null);
-            for (let d = 1; d <= daysInMonth; d++) cells.push({ day: d, date: new Date(year, month, d) });
-            return cells;
-        }, [month, year]);
-
-        return (
-            <View style={{ flex: 1 }}>
-                <View style={styles.weekHeader}>
-                    {['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'].map(d => (<Text key={d} style={styles.weekDay}>{d}</Text>))}
-                </View>
-                <FlatList
-                    data={grid}
-                    numColumns={7}
-                    scrollEnabled={false}
-                    keyExtractor={(_, i) => `grid-${month}-${i}`}
-                    renderItem={({ item }) => {
-                        if (!item) return <View style={styles.emptyDay} />;
-                        const isToday = new Date().toDateString() === item.date.toDateString();
-                        const dateKey = `${item.date.getFullYear()}-${String(item.date.getMonth() + 1).padStart(2, '0')}-${String(item.date.getDate()).padStart(2, '0')}`;
-                        const dayInfo = yearData.find(x => x.date === dateKey);
-                        const dotColor = dayInfo ? mapColor(dayInfo.mau_ao_le) : 'transparent';
-                        const isTrong = dayInfo?.bac_le === 'Trọng';
-                        return (
-                            <TouchableOpacity style={[styles.dayCell, isToday && styles.todayCell, isTrong && styles.cellLeTrong]}>
-                                <Text style={[styles.dayCellText, isTrong && { color: '#c0392b', fontWeight: 'bold' }]}>{item.day}</Text>
-                                <View style={[styles.dotMauAo, { backgroundColor: dotColor, borderColor: dotColor === '#ecf0f1' ? '#bdc3c7' : 'transparent', borderWidth: dotColor === '#ecf0f1' ? 0.5 : 0 }]} />
-                            </TouchableOpacity>
-                        );
-                    }}
-                />
-            </View>
-        );
-    };
-
-    const onFlingUp = ({ nativeEvent }) => {
-        if (nativeEvent.state === State.ACTIVE) {
-            const today = new Date();
-            const idx = GENERATED_MONTHS.findIndex(m => m.month === today.getMonth() && m.year === today.getFullYear());
-            setMonthPagerIndex(idx !== -1 ? idx : 0);
-            setMonthModalVisible(true);
-        }
-    };
-
     if (loading) return <View style={styles.loadingContainer}><ActivityIndicator size="large" color="#007AFF" /></View>;
 
     return (
@@ -283,60 +192,43 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
             <FlingGestureHandler direction={Directions.UP} onHandlerStateChange={onFlingUp}>
                 <View style={{ flex: 1 }}>
                     <ImageBackground source={require('../../assets/images/11.jpg')} style={styles.container}>
-                        <PagerView
-                            ref={pagerRef}
-                            style={styles.mainPager}
-                            initialPage={initialIndex}
-                            offscreenPageLimit={1}
-                        >
+                        <PagerView ref={pagerRef} style={styles.mainPager} initialPage={initialIndex} offscreenPageLimit={1}>
                             {allDays.map((day, i) => (
                                 <View key={`${day.date}-${i}`}>
-                                    <DayCard
-                                        item={day}
-                                        insets={insets}
-                                        setSelectedLe={setSelectedLe}
-                                        setModalVisible={setModalVisible}
-                                    />
+                                    <DayCard item={day} insets={insets} setSelectedLe={setSelectedLe} setModalVisible={setModalVisible} />
                                 </View>
                             ))}
                         </PagerView>
 
-                        <Modal animationType="slide" visible={monthModalVisible}>
-                            <View style={[styles.fullModal, { paddingTop: insets.top }]}>
-                                <View style={styles.monthHeaderRow}>
-                                    <TouchableOpacity onPress={() => setMonthModalVisible(false)}><Text style={styles.closeBtnTxt}>✕</Text></TouchableOpacity>
-                                    <View style={{ width: 40 }} />
-                                </View>
-                                <PagerView
-                                    style={{ flex: 1 }}
-                                    initialPage={monthPagerIndex}
-                                    onPageSelected={(e) => setMonthPagerIndex(e.nativeEvent.position)}
-                                >
-                                    {GENERATED_MONTHS.map((m, index) => (
-                                        <View key={`month-page-${index}`}>
-                                            <View style={{ alignItems: 'center', marginBottom: 15 }}>
-                                                <Text style={styles.monthLabel}>Tháng {m.month + 1} - {m.year}</Text>
-                                            </View>
-                                            <MonthGrid month={m.month} year={m.year} />
-                                        </View>
-                                    ))}
-                                </PagerView>
-                            </View>
-                        </Modal>
+                        <MonthCalendarModal
+                            visible={monthModalVisible}
+                            onClose={() => setMonthModalVisible(false)}
+                            insets={insets}
+                            GENERATED_MONTHS={GENERATED_MONTHS}
+                            monthPagerIndex={monthPagerIndex}
+                            setMonthPagerIndex={setMonthPagerIndex}
+                            clickedDate={clickedDate}
+                            setClickedDate={handleDayPress}
+                            yearData={yearData}
+                            fullDayData={fullDayData}
+                            loadingDay={loadingDay}
+                            fontScale={fontScale}
+                            setFontScale={setFontScale}
+                            darkMode={darkMode}
+                            setDarkMode={setDarkMode}
+                        />
 
                         <Modal animationType="slide" visible={modalVisible}>
                             <View style={[styles.modalContainer, { paddingTop: insets.top, backgroundColor: modalColors.bg }]}>
                                 <StatusBar barStyle={darkMode ? "light-content" : "dark-content"} />
                                 <View style={[styles.controlBar, { backgroundColor: modalColors.controlBg, borderBottomColor: modalColors.border }]}>
                                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                        <TouchableOpacity onPress={() => saveFontScale(fontScale - 0.1)}><Text style={{ fontSize: 20, color: modalColors.text, padding: 5 }}>A-</Text></TouchableOpacity>
+                                        <TouchableOpacity onPress={() => { const s = Math.max(0.8, fontScale - 0.1); setFontScale(s); AsyncStorage.setItem(FONT_SCALE_KEY, s.toString()) }}><Text style={{ fontSize: 20, color: modalColors.text, padding: 5 }}>A-</Text></TouchableOpacity>
                                         <Text style={{ marginHorizontal: 10, color: modalColors.text }}>{Math.round(fontScale * 100)}%</Text>
-                                        <TouchableOpacity onPress={() => saveFontScale(fontScale + 0.1)}><Text style={{ fontSize: 20, color: modalColors.text, padding: 5 }}>A+</Text></TouchableOpacity>
+                                        <TouchableOpacity onPress={() => { const s = Math.min(1.8, fontScale + 0.1); setFontScale(s); AsyncStorage.setItem(FONT_SCALE_KEY, s.toString()) }}><Text style={{ fontSize: 20, color: modalColors.text, padding: 5 }}>A+</Text></TouchableOpacity>
                                     </View>
-                                    <TouchableOpacity onPress={() => saveDarkMode(!darkMode)}><Text style={{ fontSize: 20 }}>{darkMode ? "🌙" : "☀️"}</Text></TouchableOpacity>
-                                    <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeButton}>
-                                        <Text style={[styles.closeButtonText, { color: modalColors.title }]}>✕ Đóng</Text>
-                                    </TouchableOpacity>
+                                    <TouchableOpacity onPress={() => { const m = !darkMode; setDarkMode(m); AsyncStorage.setItem(DARK_MODE_KEY, m.toString()) }}><Text style={{ fontSize: 20 }}>{darkMode ? "🌙" : "☀️"}</Text></TouchableOpacity>
+                                    <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeButton}><Text style={[styles.closeButtonText, { color: modalColors.title }]}>✕ Đóng</Text></TouchableOpacity>
                                 </View>
                                 <ScrollView contentContainerStyle={styles.modalScrollContent}>
                                     {selectedLe?.ban_van && (
@@ -347,10 +239,10 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
                                                     <RenderHTML contentWidth={contentWidth} source={{ html: selectedLe.ban_van.bd1_le }} tagsStyles={tagsStyles} />
                                                 </View>
                                             )}
-                                            {selectedLe.ban_van.dap_ca && (
+                                            {selectedLe.ban_van.dap_ca_le && (
                                                 <View style={{ marginBottom: 20 }}>
                                                     <Text style={[styles.sectionTitle, { color: modalColors.title, fontSize: 18 * fontScale }]}>Đáp ca</Text>
-                                                    <RenderHTML contentWidth={contentWidth} source={{ html: selectedLe.ban_van.dap_ca }} tagsStyles={tagsStyles} />
+                                                    <RenderHTML contentWidth={contentWidth} source={{ html: selectedLe.ban_van.dap_ca_le }} tagsStyles={tagsStyles} />
                                                 </View>
                                             )}
                                             {selectedLe.ban_van.bd2 && (
@@ -411,18 +303,6 @@ const styles = StyleSheet.create({
     dot: { width: 7, height: 7, borderRadius: 3.5, margin: 3 },
     activeDot: { backgroundColor: '#c0392b', width: 16 },
     inactiveDot: { backgroundColor: '#ccc' },
-    fullModal: { flex: 1, backgroundColor: '#fff' },
-    monthHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 15 },
-    closeBtnTxt: { fontSize: 24 },
-    monthLabel: { fontSize: 20, fontWeight: 'bold', color: '#c0392b' },
-    weekHeader: { flexDirection: 'row' },
-    weekDay: { width: width / 7, textAlign: 'center', fontWeight: 'bold' },
-    dayCell: { width: width / 7, height: height / 11, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'transparent' },
-    cellLeTrong: { borderColor: '#c0392b', borderRadius: 8 },
-    emptyDay: { width: width / 7, height: height / 11 },
-    dayCellText: { fontSize: 18 },
-    todayCell: { backgroundColor: '#fdecea', borderRadius: 8 },
-    dotMauAo: { width: 6, height: 6, borderRadius: 3, marginTop: 4 },
     modalContainer: { flex: 1 },
     controlBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 10, borderBottomWidth: 1 },
     closeButton: { padding: 5 },
