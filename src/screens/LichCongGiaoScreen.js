@@ -28,6 +28,7 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import RenderHTML from "react-native-render-html";
 import { useIsFocused } from '@react-navigation/native';
+// import { red } from 'react-native-reanimated/lib/typescript/Colors';
 
 const { width, height } = Dimensions.get('window');
 
@@ -195,7 +196,7 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
         strong: { fontWeight: "bold", color: modalColors.text },
         em: { fontStyle: "italic", color: modalColors.text }
     }), [fontScale, modalColors]);
-
+    
     useEffect(() => {
         fetchData();
         fetchYearData();
@@ -347,10 +348,10 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
                                                     <RenderHTML contentWidth={contentWidth} source={{ html: selectedLe.ban_van.bd1_le }} tagsStyles={tagsStyles} />
                                                 </View>
                                             )}
-                                            {selectedLe.ban_van.dap_ca && (
+                                            {selectedLe.ban_van.dap_ca_le && (
                                                 <View style={{ marginBottom: 20 }}>
                                                     <Text style={[styles.sectionTitle, { color: modalColors.title, fontSize: 18 * fontScale }]}>Đáp ca</Text>
-                                                    <RenderHTML contentWidth={contentWidth} source={{ html: selectedLe.ban_van.dap_ca }} tagsStyles={tagsStyles} />
+                                                    <RenderHTML contentWidth={contentWidth} source={{ html: selectedLe.ban_van.dap_ca_le }} tagsStyles={tagsStyles} />
                                                 </View>
                                             )}
                                             {selectedLe.ban_van.bd2 && (
