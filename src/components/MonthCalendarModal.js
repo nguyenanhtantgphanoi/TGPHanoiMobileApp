@@ -1,4 +1,4 @@
-import React, { useMemo, memo, useState } from 'react';
+import React, { useMemo, memo, useState, useEffect } from "react";
 import {
     StyleSheet,
     Text,
@@ -10,134 +10,325 @@ import {
     Dimensions,
     ActivityIndicator,
     StatusBar,
-    useWindowDimensions
-} from 'react-native';
-import PagerView from 'react-native-pager-view';
+    useWindowDimensions,
+    TextInput,
+    KeyboardAvoidingView,
+    Platform,
+    Alert,
+} from "react-native";
+import PagerView from "react-native-pager-view";
 import RenderHTML from "react-native-render-html";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const { width, height } = Dimensions.get('window');
-const FONT_SCALE_KEY = "@kinh_font_scale";
-const DARK_MODE_KEY = "@kinh_dark_mode";
+const { width, height } = Dimensions.get("window");
+const NOTES_KEY = "@kinh_user_notes_v6";
+const ITEM_HEIGHT = 40;
 
 const mapColor = (colorName) => {
     switch (colorName) {
-        case 'Tím': return '#8e44ad';
-        case 'Trắng': return '#ecf0f1';
-        case 'Đỏ': return '#e74c3c';
-        case 'Xanh': return '#27ae60';
-        case 'Vàng': return '#f1c40f';
-        case 'Hồng': return '#ff9ff3';
-        default: return 'transparent';
+        case "Tím":
+            return "#8e44ad";
+        case "Trắng":
+            return "#ecf0f1";
+        case "Đỏ":
+            return "#e74c3c";
+        case "Xanh":
+            return "#27ae60";
+        case "Vàng":
+            return "#f1c40f";
+        case "Hồng":
+            return "#ff9ff3";
+        default:
+            return "transparent";
     }
 };
 
-const MonthCell = memo(({ item, isToday, isClicked, dayInfo, onPress }) => {
-    if (!item) return <View style={styles.cellWrapper} />;
-    const dotColor = dayInfo ? mapColor(dayInfo.mau_ao_le) : 'transparent';
-    const isTrong = dayInfo?.bac_le === 'Trọng';
-    const isSunday = item.date.getDay() === 0;
-
+const VerticalWheel = ({ data, selectedValue, onValueChange }) => {
+    const initialIdx = data.indexOf(selectedValue);
     return (
-        <View style={styles.cellWrapper}>
-            <TouchableOpacity
-                activeOpacity={0.7}
-                style={[styles.dayCell, isToday && styles.todayCell, isTrong && styles.cellLeTrong, isClicked && styles.clickedCell]}
-                onPress={() => onPress(item.date)}
-            >
-                <Text style={[styles.dayCellText, isSunday && { color: '#c0392b' }, isTrong && { fontWeight: 'bold' }]}>{item.day}</Text>
-                <View style={[styles.dotMauAo, { backgroundColor: dotColor, borderColor: dotColor === '#ecf0f1' ? '#bdc3c7' : 'transparent', borderWidth: dotColor === '#ecf0f1' ? 0.5 : 0 }]} />
-            </TouchableOpacity>
-        </View>
-    );
-});
-
-const MonthGrid = memo(({ month, year, clickedDate, yearData, onDayPress }) => {
-    const grid = useMemo(() => {
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
-        const firstDay = new Date(year, month, 1).getDay();
-        const cells = [];
-        for (let i = 0; i < firstDay; i++) cells.push(null);
-        for (let d = 1; d <= daysInMonth; d++) cells.push({ day: d, date: new Date(year, month, d) });
-        return cells;
-    }, [month, year]);
-
-    return (
-        <View style={{ width: '100%' }}>
-            <View style={styles.weekHeader}>
-                {['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'].map(d => (
-                    <Text key={d} style={[styles.weekDay, d === 'CN' && { color: '#c0392b' }]}>{d}</Text>
-                ))}
-            </View>
+        <View style={styles.wheelWrapper}>
             <FlatList
-                data={grid}
-                numColumns={7}
-                scrollEnabled={false}
-                keyExtractor={(_, i) => `grid-${month}-${year}-${i}`}
-                renderItem={({ item }) => {
-                    const dateKey = item ? `${item.date.getFullYear()}-${String(item.date.getMonth() + 1).padStart(2, '0')}-${String(item.date.getDate()).padStart(2, '0')}` : "";
-                    return (
-                        <MonthCell
-                            item={item}
-                            isToday={item && new Date().toDateString() === item.date.toDateString()}
-                            isClicked={item && clickedDate?.toDateString() === item.date.toDateString()}
-                            dayInfo={yearData.find(x => x.date === dateKey)}
-                            onPress={onDayPress}
-                        />
-                    );
+                data={["", ...data, ""]}
+                keyExtractor={(item, index) => `wheel-${item}-${index}`}
+                showsVerticalScrollIndicator={false}
+                snapToInterval={ITEM_HEIGHT}
+                decelerationRate="fast"
+                initialScrollIndex={initialIdx > 0 ? initialIdx : 0}
+                getItemLayout={(_, index) => ({
+                    length: ITEM_HEIGHT,
+                    offset: ITEM_HEIGHT * index,
+                    index,
+                })}
+                onMomentumScrollEnd={(e) => {
+                    const index = Math.round(e.nativeEvent.contentOffset.y / ITEM_HEIGHT);
+                    if (data[index]) onValueChange(data[index]);
                 }}
+                renderItem={({ item }) => (
+                    <View style={styles.wheelItem}>
+                        <Text
+                            style={[
+                                styles.wheelItemTxt,
+                                item === selectedValue && styles.wheelItemTxtActive,
+                            ]}
+                        >
+                            {item}
+                        </Text>
+                    </View>
+                )}
             />
+            <View style={styles.wheelHighlight} pointerEvents="none" />
         </View>
     );
-});
+};
+
+const MonthCell = memo(
+    ({ item, isToday, isClicked, dayInfo, onPress, hasNote }) => {
+        if (!item) return <View style={styles.cellWrapper} />;
+        const dotColor = dayInfo ? mapColor(dayInfo.mau_ao_le) : "transparent";
+        const isTrong = dayInfo?.bac_le === "Trọng";
+        const isSunday = item.date.getDay() === 0;
+        return (
+            <View style={styles.cellWrapper}>
+                <TouchableOpacity
+                    activeOpacity={0.7}
+                    style={[
+                        styles.dayCell,
+                        isToday && styles.todayCell,
+                        isTrong && styles.cellLeTrong,
+                        isClicked && styles.clickedCell,
+                    ]}
+                    onPress={() => onPress(item.date)}
+                >
+                    <Text
+                        style={[
+                            styles.dayCellText,
+                            isSunday && { color: "#c0392b" },
+                            isTrong && { fontWeight: "bold" },
+                        ]}
+                    >
+                        {item.day}
+                    </Text>
+                    {hasNote && <View style={styles.noteIndicator} />}
+                    <View
+                        style={[
+                            styles.dotMauAo,
+                            {
+                                backgroundColor: dotColor,
+                                borderColor: dotColor === "#ecf0f1" ? "#bdc3c7" : "transparent",
+                                borderWidth: dotColor === "#ecf0f1" ? 0.5 : 0,
+                            },
+                        ]}
+                    />
+                </TouchableOpacity>
+            </View>
+        );
+    },
+);
+
+const MonthGrid = memo(
+    ({ month, year, clickedDate, yearData, onDayPress, notes }) => {
+        const grid = useMemo(() => {
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const firstDay = new Date(year, month, 1).getDay();
+            const cells = [];
+            for (let i = 0; i < firstDay; i++) cells.push(null);
+            for (let d = 1; d <= daysInMonth; d++)
+                cells.push({ day: d, date: new Date(year, month, d) });
+            return cells;
+        }, [month, year]);
+        return (
+            <View style={{ width: "100%" }}>
+                <View style={styles.weekHeader}>
+                    {["CN", "T2", "T3", "T4", "T5", "T6", "T7"].map((d) => (
+                        <Text
+                            key={d}
+                            style={[styles.weekDay, d === "CN" && { color: "#c0392b" }]}
+                        >
+                            {d}
+                        </Text>
+                    ))}
+                </View>
+                <FlatList
+                    data={grid}
+                    numColumns={7}
+                    scrollEnabled={false}
+                    keyExtractor={(_, i) => `g-${month}-${year}-${i}`}
+                    renderItem={({ item }) => {
+                        const dateKey = item
+                            ? `${item.date.getFullYear()}-${String(item.date.getMonth() + 1).padStart(2, "0")}-${String(item.date.getDate()).padStart(2, "0")}`
+                            : "";
+                        return (
+                            <MonthCell
+                                item={item}
+                                isToday={
+                                    item && new Date().toDateString() === item.date.toDateString()
+                                }
+                                isClicked={
+                                    item &&
+                                    clickedDate?.toDateString() === item.date.toDateString()
+                                }
+                                dayInfo={yearData.find((x) => x.date === dateKey)}
+                                hasNote={notes[dateKey]?.length > 0}
+                                onPress={onDayPress}
+                            />
+                        );
+                    }}
+                />
+            </View>
+        );
+    },
+);
 
 const MonthCalendarModal = ({
-    visible, onClose, insets, GENERATED_MONTHS, monthPagerIndex,
-    setMonthPagerIndex, clickedDate, setClickedDate, yearData,
-    fullDayData, loadingDay, fontScale, setFontScale, darkMode, setDarkMode
+    visible,
+    onClose,
+    insets,
+    GENERATED_MONTHS,
+    monthPagerIndex,
+    setMonthPagerIndex,
+    clickedDate,
+    setClickedDate,
+    yearData,
+    fullDayData,
+    loadingDay,
+    fontScale,
+    setFontScale,
+    darkMode,
+    setDarkMode,
 }) => {
     const [activeLeIdx, setActiveLeIdx] = useState(0);
     const [detailVisible, setDetailVisible] = useState(false);
     const [selectedLe, setSelectedLe] = useState(null);
     const { width: contentWidth } = useWindowDimensions();
+    const [notes, setNotes] = useState({});
+    const [viewMode, setViewMode] = useState("INFO");
+    const [isNoteEditVisible, setNoteEditVisible] = useState(false);
+    const [noteInput, setNoteInput] = useState("");
+    const [selHour, setSelHour] = useState("05");
+    const [selMinute, setSelMinute] = useState("00");
+    const [editingId, setEditingId] = useState(null);
+    const [pagerHeight, setPagerHeight] = useState(120);
+
+    useEffect(() => {
+        if (visible) loadNotes();
+    }, [visible]);
+
+    const loadNotes = async () => {
+        const saved = await AsyncStorage.getItem(NOTES_KEY);
+        if (saved) setNotes(JSON.parse(saved));
+    };
+
+    const currentDateKey = clickedDate
+        ? `${clickedDate.getFullYear()}-${String(clickedDate.getMonth() + 1).padStart(2, "0")}-${String(clickedDate.getDate()).padStart(2, "0")}`
+        : "";
+
+    const saveEvent = async () => {
+        if (!noteInput.trim()) return;
+        const newNotes = { ...notes };
+        const dayEvents = newNotes[currentDateKey] || [];
+        const newEv = {
+            id: editingId || Date.now().toString(),
+            text: noteInput,
+            time: `${selHour}:${selMinute}`,
+        };
+        if (editingId) {
+            newNotes[currentDateKey] = dayEvents.map((e) =>
+                e.id === editingId ? newEv : e,
+            );
+        } else {
+            newNotes[currentDateKey] = [...dayEvents, newEv].sort((a, b) =>
+                a.time.localeCompare(b.time),
+            );
+        }
+        setNotes(newNotes);
+        await AsyncStorage.setItem(NOTES_KEY, JSON.stringify(newNotes));
+        setNoteEditVisible(false);
+        setEditingId(null);
+        setNoteInput("");
+    };
+
+    const deleteEvent = (id) => {
+        Alert.alert("Xóa sự kiện", "Bạn có chắc chắn?", [
+            { text: "Hủy" },
+            {
+                text: "Xóa",
+                style: "destructive",
+                onPress: async () => {
+                    const newNotes = { ...notes };
+                    newNotes[currentDateKey] = newNotes[currentDateKey].filter(
+                        (e) => e.id !== id,
+                    );
+                    if (newNotes[currentDateKey].length === 0)
+                        delete newNotes[currentDateKey];
+                    setNotes(newNotes);
+                    await AsyncStorage.setItem(NOTES_KEY, JSON.stringify(newNotes));
+                },
+            },
+        ]);
+    };
 
     const listLe = useMemo(() => {
         if (!fullDayData) return [];
         const arr = fullDayData.arr_cac_le || [];
         if (arr.length === 0) return [fullDayData];
-        return arr.map((le, index) => {
-            if (index === 0) {
-                return {
+        return arr.map((le, index) =>
+            index === 0
+                ? {
                     ...le,
                     bd_1: fullDayData.bd_1 || le.bd_1,
                     bd_2: fullDayData.bd_2 || le.bd_2,
                     tin_mung: fullDayData.tin_mung || le.tin_mung,
-                };
-            }
-            return le;
-        });
+                }
+                : le,
+        );
     }, [fullDayData]);
 
-    const modalColors = useMemo(() => ({
-        bg: darkMode ? "#121212" : "#FFFFFF",
-        text: darkMode ? "#EAEAEA" : "#000000",
-        title: darkMode ? "#FFB3B3" : "#c0392b",
-        controlBg: darkMode ? "#1E1E1E" : "#F4F4F4",
-        border: darkMode ? "#333" : "#DDD",
-    }), [darkMode]);
+    const modalColors = useMemo(
+        () => ({
+            bg: darkMode ? "#121212" : "#FFFFFF",
+            text: darkMode ? "#EAEAEA" : "#000000",
+            title: darkMode ? "#FFB3B3" : "#c0392b",
+            controlBg: darkMode ? "#1E1E1E" : "#F4F4F4",
+            border: darkMode ? "#333" : "#DDD",
+        }),
+        [darkMode],
+    );
 
-    const tagsStyles = useMemo(() => ({
-        body: { color: modalColors.text, fontSize: 17 * fontScale, lineHeight: 28 * fontScale },
-        p: { marginBottom: 10, color: modalColors.text, fontSize: 17 * fontScale },
-        strong: { fontWeight: "bold", color: modalColors.text },
-        em: { fontStyle: "italic", color: modalColors.text }
-    }), [fontScale, modalColors]);
+    const tagsStyles = useMemo(
+        () => ({
+            body: {
+                color: modalColors.text,
+                fontSize: 17 * fontScale,
+                lineHeight: 28 * fontScale,
+            },
+            p: {
+                marginBottom: 10,
+                color: modalColors.text,
+                fontSize: 17 * fontScale,
+            },
+            strong: { fontWeight: "bold", color: modalColors.text },
+            em: { fontStyle: "italic", color: modalColors.text },
+        }),
+        [fontScale, modalColors],
+    );
+
+    const hoursData = Array.from({ length: 24 }, (_, i) =>
+        String(i).padStart(2, "0"),
+    );
+    const minutesData = Array.from({ length: 60 }, (_, i) =>
+        String(i).padStart(2, "0"),
+    );
+
+    const openReading = (le) => {
+        setSelectedLe(le);
+        setDetailVisible(true);
+    };
 
     return (
         <Modal animationType="slide" visible={visible}>
             <View style={[styles.fullModal, { paddingTop: insets.top }]}>
                 <View style={styles.monthHeaderRow}>
-                    <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
+                    <TouchableOpacity onPress={onClose}>
                         <Text style={styles.closeBtnTxt}>✕ Đóng</Text>
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>Lịch Tháng</Text>
@@ -151,118 +342,350 @@ const MonthCalendarModal = ({
                         onPageSelected={(e) => setMonthPagerIndex(e.nativeEvent.position)}
                     >
                         {GENERATED_MONTHS.map((m, index) => (
-                            <View key={`month-page-${index}`} style={{ paddingHorizontal: 10 }}>
-                                <Text style={styles.monthLabel}>Tháng {m.month + 1} - {m.year}</Text>
-                                <MonthGrid month={m.month} year={m.year} clickedDate={clickedDate} yearData={yearData} onDayPress={(d) => { setActiveLeIdx(0); setClickedDate(d); }} />
+                            <View key={`m-${index}`} style={{ paddingHorizontal: 10 }}>
+                                <Text style={styles.monthLabel}>
+                                    Tháng {m.month + 1} - {m.year}
+                                </Text>
+                                <MonthGrid
+                                    month={m.month}
+                                    year={m.year}
+                                    clickedDate={clickedDate}
+                                    yearData={yearData}
+                                    notes={notes}
+                                    onDayPress={(d) => {
+                                        setActiveLeIdx(0);
+                                        setClickedDate(d);
+                                    }}
+                                />
                             </View>
                         ))}
                     </PagerView>
                 </View>
 
                 <View style={styles.infoBox}>
-                    {loadingDay ? (
-                        <ActivityIndicator size="large" color="#c0392b" style={{ marginTop: 40 }} />
-                    ) : clickedDate && listLe.length > 0 ? (
-                        <View style={{ flex: 1, width: '100%' }}>
-                            <View style={{ alignItems: 'center', marginBottom: 5 }}>
-                                <Text style={styles.infoTextMain}>{clickedDate.getDate()}-{clickedDate.getMonth() + 1}-{clickedDate.getFullYear()}</Text>
-                                <View style={styles.dividerSmall} />
-                            </View>
-
-                            <PagerView
-                                style={{ flex: 1 }}
-                                initialPage={0}
-                                onPageSelected={(e) => setActiveLeIdx(e.nativeEvent.position)}
+                    {/* KHU VỰC SWITCH - ĐÃ FIX MỜ */}
+                    <View style={styles.switchContainer}>
+                        <TouchableOpacity
+                            activeOpacity={1}
+                            style={[
+                                styles.switchBtn,
+                                viewMode === "INFO" && styles.switchBtnActive,
+                            ]}
+                            onPress={() => setViewMode("INFO")}
+                        >
+                            <Text
+                                style={[
+                                    styles.switchText,
+                                    viewMode === "INFO" && styles.switchTextActive,
+                                ]}
                             >
-                                {listLe.map((le, idx) => (
-                                    <ScrollView key={`le-info-${idx}`} showsVerticalScrollIndicator={false}>
-                                        <TouchableOpacity activeOpacity={0.7} onPress={() => { setSelectedLe(le); setDetailVisible(true); }} style={{ alignItems: 'center', paddingBottom: 20 }}>
-                                            <Text style={styles.infoTextSub}>{le.title}</Text>
-                                            <Text style={styles.summaryText}>
-                                                {le.ban_van?.bd1_le_trich_tu || le.bd_1}
-                                                {le.ban_van?.bd2_trich_tu ? `; ${le.ban_van.bd2_trich_tu}` : le.bd_2 ? `; ${le.bd_2}` : ""}
-                                                {`; ${le.ban_van?.phuc_am_trich_tu || le.tin_mung || ""}`}
-                                            </Text>
-                                            <Text style={[styles.infoTextSub, { fontWeight: '500', fontSize: 16, marginTop: 8, marginBottom: 0 }]}>{fullDayData.under_title}</Text>
-                                            {fullDayData.xu_chau_luot ? (
-                                                <View style={styles.chauLuotContainer}>
-                                                    <Text style={styles.chauLuotTitle}>⛪ Chầu lượt:</Text>
-                                                    <Text style={styles.chauLuotText}>{fullDayData.xu_chau_luot.trim()} Chầu Mình Thánh</Text>
-                                                </View>
-                                            ) : null}
-                                            {/* <Text style={styles.noteText}>Chạm để xem chi tiết bài đọc 📖</Text> */}
-                                        </TouchableOpacity>
-                                    </ScrollView>
-                                ))}
-                            </PagerView>
+                                Thông tin Lễ
+                            </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            activeOpacity={1}
+                            style={[
+                                styles.switchBtn,
+                                viewMode === "NOTE" && styles.switchBtnActive,
+                            ]}
+                            onPress={() => setViewMode("NOTE")}
+                        >
+                            <Text
+                                style={[
+                                    styles.switchText,
+                                    viewMode === "NOTE" && styles.switchTextActive,
+                                ]}
+                            >
+                                Sự kiện ({notes[currentDateKey]?.length || 0})
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
 
-                            {listLe.length > 1 && (
-                                <View style={styles.dotsContainer}>
-                                    {listLe.map((_, i) => (
-                                        <View key={`dot-m-${i}`} style={[styles.dot, activeLeIdx === i ? styles.activeDot : styles.inactiveDot]} />
-                                    ))}
+                    <ScrollView
+                        showsVerticalScrollIndicator={false}
+                        contentContainerStyle={{ flexGrow: 1 }}
+                    >
+                        {loadingDay ? (
+                            <ActivityIndicator
+                                size="large"
+                                color="#c0392b"
+                                style={{ marginTop: 20 }}
+                            />
+                        ) : viewMode === "INFO" ? (
+                            <View style={{ opacity: 1 }}>
+                                <View style={{ height: 60, overflow: "hidden" }}>
+                                    <PagerView
+                                        key={`pager-${currentDateKey}-${listLe.length}`} // Key động để force render không bị mờ
+                                        style={{ flex: 1 }}
+                                        initialPage={0}
+                                        onPageSelected={(e) =>
+                                            setActiveLeIdx(e.nativeEvent.position)
+                                        }
+                                    >
+                                        {listLe.map((le, idx) => (
+                                            <TouchableOpacity
+                                                key={`le-${idx}`}
+                                                activeOpacity={0.7}
+                                                delayPressIn={150} // Tăng delay để vuốt mượt hơn
+                                                onPress={() => openReading(le)}
+                                                onLayout={(e) => {
+                                                    const { height: lh } = e.nativeEvent.layout;
+                                                    if (idx === activeLeIdx && lh > 0) setPagerHeight(lh);
+                                                }}
+                                                style={{ alignItems: "center" }}
+                                            >
+                                                <Text style={styles.infoTextSub}>{le.title}</Text>
+                                                <Text style={styles.summaryText}>
+                                                    {le.ban_van?.bd1_le_trich_tu || le.bd_1}
+                                                    {le.ban_van?.bd2_trich_tu
+                                                        ? `; ${le.ban_van.bd2_trich_tu}`
+                                                        : le.bd_2
+                                                            ? `; ${le.bd_2}`
+                                                            : ""}
+                                                    {`; ${le.ban_van?.phuc_am_trich_tu || le.tin_mung || ""}`}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </PagerView>
                                 </View>
-                            )}
-                        </View>
-                    ) : (
-                        <Text style={styles.placeholderText}>Chọn một ngày để xem</Text>
-                    )}
+
+                                <TouchableOpacity
+                                    activeOpacity={0.7}
+                                    onPress={() => openReading(listLe[activeLeIdx])}
+                                    style={{ alignItems: "center" }}
+                                >
+                                    {listLe.length > 1 && (
+                                        <View style={styles.dotsContainer}>
+                                            {listLe.map((_, i) => (
+                                                <View
+                                                    key={`d-${i}`}
+                                                    style={[
+                                                        styles.dot,
+                                                        activeLeIdx === i
+                                                            ? styles.activeDot
+                                                            : styles.inactiveDot,
+                                                    ]}
+                                                />
+                                            ))}
+                                        </View>
+                                    )}
+                                    <Text style={styles.underTitle}>
+                                        {fullDayData?.under_title}
+                                    </Text>
+                                    {fullDayData?.xu_chau_luot && (
+                                        <View style={styles.chauLuotContainer}>
+                                            <Text style={styles.chauLuotTitle}>⛪ Chầu lượt:</Text>
+                                            <Text style={styles.chauLuotText}>
+                                                {fullDayData.xu_chau_luot.trim()} Chầu Mình Thánh
+                                            </Text>
+                                        </View>
+                                    )}
+                                </TouchableOpacity>
+                            </View>
+                        ) : (
+                            <View style={styles.noteArea}>
+                                {notes[currentDateKey]?.map((item) => (
+                                    <View key={item.id} style={styles.noteCard}>
+                                        <View style={{ flex: 1 }}>
+                                            <Text style={styles.noteTime}>⏰ {item.time}</Text>
+                                            <Text style={styles.noteText}>{item.text}</Text>
+                                        </View>
+                                        <View style={styles.noteActionCol}>
+                                            <TouchableOpacity
+                                                onPress={() => {
+                                                    setEditingId(item.id);
+                                                    setNoteInput(item.text);
+                                                    const [h, m] = item.time.split(":");
+                                                    setSelHour(h);
+                                                    setSelMinute(m);
+                                                    setNoteEditVisible(true);
+                                                }}
+                                            >
+                                                <Text style={styles.editBtn}>Sửa</Text>
+                                            </TouchableOpacity>
+                                            <TouchableOpacity onPress={() => deleteEvent(item.id)}>
+                                                <Text style={styles.delBtn}>Xóa</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    </View>
+                                ))}
+                                <TouchableOpacity
+                                    style={styles.addBtn}
+                                    onPress={() => {
+                                        setEditingId(null);
+                                        setNoteInput("");
+                                        setSelHour("05");
+                                        setSelMinute("00");
+                                        setNoteEditVisible(true);
+                                    }}
+                                >
+                                    <Text style={styles.addBtnTxt}>+ Thêm sự kiện</Text>
+                                </TouchableOpacity>
+                            </View>
+                        )}
+                        <View style={{ height: 50 }} />
+                    </ScrollView>
                 </View>
 
-                {/* MODAL CHI TIẾT LỒNG BÊN TRONG CÓ ĐẦY ĐỦ CONTROL BAR */}
-                <Modal animationType="slide" visible={detailVisible} transparent={false}>
-                    <View style={[styles.detailModalContainer, { paddingTop: insets.top, backgroundColor: modalColors.bg }]}>
+                {/* MODAL CHI TIẾT */}
+                <Modal animationType="slide" visible={detailVisible}>
+                    <View
+                        style={[
+                            styles.detailModal,
+                            { paddingTop: insets.top, backgroundColor: modalColors.bg },
+                        ]}
+                    >
                         <StatusBar barStyle={darkMode ? "light-content" : "dark-content"} />
-                        <View style={[styles.detailControlBar, { backgroundColor: modalColors.controlBg, borderBottomColor: modalColors.border }]}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                <TouchableOpacity onPress={() => { const s = Math.max(0.8, fontScale - 0.1); setFontScale(s); AsyncStorage.setItem(FONT_SCALE_KEY, s.toString()) }}><Text style={{ fontSize: 20, color: modalColors.text, padding: 5 }}>A-</Text></TouchableOpacity>
-                                <Text style={{ marginHorizontal: 10, color: modalColors.text }}>{Math.round(fontScale * 100)}%</Text>
-                                <TouchableOpacity onPress={() => { const s = Math.min(1.8, fontScale + 0.1); setFontScale(s); AsyncStorage.setItem(FONT_SCALE_KEY, s.toString()) }}><Text style={{ fontSize: 20, color: modalColors.text, padding: 5 }}>A+</Text></TouchableOpacity>
+                        <View
+                            style={[
+                                styles.detailHeader,
+                                {
+                                    backgroundColor: modalColors.controlBg,
+                                    borderBottomColor: modalColors.border,
+                                },
+                            ]}
+                        >
+                            <View style={{ flexDirection: "row", alignItems: "center" }}>
+                                <TouchableOpacity
+                                    onPress={() =>
+                                        setFontScale((prev) => Math.max(0.8, prev - 0.1))
+                                    }
+                                >
+                                    <Text style={{ color: modalColors.text, padding: 10 }}>
+                                        A-
+                                    </Text>
+                                </TouchableOpacity>
+                                <Text style={{ color: modalColors.text }}>
+                                    {Math.round(fontScale * 100)}%
+                                </Text>
+                                <TouchableOpacity
+                                    onPress={() =>
+                                        setFontScale((prev) => Math.min(1.8, prev + 0.1))
+                                    }
+                                >
+                                    <Text style={{ color: modalColors.text, padding: 10 }}>
+                                        A+
+                                    </Text>
+                                </TouchableOpacity>
                             </View>
-                            <TouchableOpacity onPress={() => { const m = !darkMode; setDarkMode(m); AsyncStorage.setItem(DARK_MODE_KEY, m.toString()) }}><Text style={{ fontSize: 20 }}>{darkMode ? "🌙" : "☀️"}</Text></TouchableOpacity>
-                            <TouchableOpacity onPress={() => setDetailVisible(false)} style={styles.detailCloseBtn}>
-                                <Text style={{ color: modalColors.title, fontWeight: 'bold', fontSize: 16 }}>✕ Đóng</Text>
+                            <TouchableOpacity onPress={() => setDarkMode(!darkMode)}>
+                                <Text style={{ fontSize: 18 }}>{darkMode ? "🌙" : "☀️"}</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={() => setDetailVisible(false)}>
+                                <Text style={{ color: modalColors.title, fontWeight: "bold" }}>
+                                    ✕ Đóng
+                                </Text>
                             </TouchableOpacity>
                         </View>
                         <ScrollView contentContainerStyle={{ padding: 20 }}>
                             {selectedLe?.ban_van ? (
                                 <>
                                     {selectedLe.ban_van.bd1_le && (
-                                        <View style={{ marginBottom: 20 }}>
-                                            <Text style={[styles.sectionTitle, { color: modalColors.title, fontSize: 18 * fontScale }]}>Bài đọc I</Text>
-                                            <RenderHTML contentWidth={contentWidth} source={{ html: selectedLe.ban_van.bd1_le }} tagsStyles={tagsStyles} />
-                                        </View>
+                                        <>
+                                            <Text
+                                                style={[styles.secTitle, { color: modalColors.title }]}
+                                            >
+                                                Bài đọc I
+                                            </Text>
+                                            <RenderHTML
+                                                contentWidth={contentWidth}
+                                                source={{ html: selectedLe.ban_van.bd1_le }}
+                                                tagsStyles={tagsStyles}
+                                            />
+                                        </>
                                     )}
                                     {selectedLe.ban_van.dap_ca_le && (
-                                        <View style={{ marginBottom: 20 }}>
-                                            <Text style={[styles.sectionTitle, { color: modalColors.title, fontSize: 18 * fontScale }]}>Đáp ca</Text>
-                                            <RenderHTML contentWidth={contentWidth} source={{ html: selectedLe.ban_van.dap_ca_le }} tagsStyles={tagsStyles} />
-                                        </View>
+                                        <>
+                                            <Text
+                                                style={[styles.secTitle, { color: modalColors.title }]}
+                                            >
+                                                Đáp ca
+                                            </Text>
+                                            <RenderHTML
+                                                contentWidth={contentWidth}
+                                                source={{ html: selectedLe.ban_van.dap_ca_le }}
+                                                tagsStyles={tagsStyles}
+                                            />
+                                        </>
                                     )}
                                     {selectedLe.ban_van.bd2 && (
-                                        <View style={{ marginBottom: 20 }}>
-                                            <Text style={[styles.sectionTitle, { color: modalColors.title, fontSize: 18 * fontScale }]}>Bài đọc II</Text>
-                                            <RenderHTML contentWidth={contentWidth} source={{ html: selectedLe.ban_van.bd2 }} tagsStyles={tagsStyles} />
-                                        </View>
-                                    )}
-                                    {selectedLe.ban_van.alleluia && (
-                                        <View style={{ marginBottom: 20 }}>
-                                            <Text style={[styles.sectionTitle, { color: modalColors.title, fontSize: 18 * fontScale }]}>Alleluia</Text>
-                                            <RenderHTML contentWidth={contentWidth} source={{ html: selectedLe.ban_van.alleluia }} tagsStyles={tagsStyles} />
-                                        </View>
+                                        <>
+                                            <Text
+                                                style={[styles.secTitle, { color: modalColors.title }]}
+                                            >
+                                                Bài đọc II
+                                            </Text>
+                                            <RenderHTML
+                                                contentWidth={contentWidth}
+                                                source={{ html: selectedLe.ban_van.bd2 }}
+                                                tagsStyles={tagsStyles}
+                                            />
+                                        </>
                                     )}
                                     {selectedLe.ban_van.phuc_am && (
-                                        <View style={{ marginBottom: 20 }}>
-                                            <Text style={[styles.sectionTitle, { color: modalColors.title, fontSize: 18 * fontScale }]}>Phúc âm</Text>
-                                            <RenderHTML contentWidth={contentWidth} source={{ html: selectedLe.ban_van.phuc_am }} tagsStyles={tagsStyles} />
-                                        </View>
+                                        <>
+                                            <Text
+                                                style={[styles.secTitle, { color: modalColors.title }]}
+                                            >
+                                                Phúc âm
+                                            </Text>
+                                            <RenderHTML
+                                                contentWidth={contentWidth}
+                                                source={{ html: selectedLe.ban_van.phuc_am }}
+                                                tagsStyles={tagsStyles}
+                                            />
+                                        </>
                                     )}
                                 </>
                             ) : (
-                                <Text style={{ textAlign: 'center', marginTop: 50, color: modalColors.text }}>Chưa có nội dung bài đọc.</Text>
+                                <Text style={{ color: modalColors.text, textAlign: "center" }}>
+                                    Đang cập nhật nội dung...
+                                </Text>
                             )}
                         </ScrollView>
                     </View>
+                </Modal>
+
+                <Modal visible={isNoteEditVisible} transparent animationType="slide">
+                    <KeyboardAvoidingView behavior="padding" style={styles.modalOverlay}>
+                        <View style={styles.modalContent}>
+                            <Text style={styles.modalTitle}>
+                                {editingId ? "Sửa" : "Thêm"} sự kiện {clickedDate?.getDate()}/
+                                {clickedDate?.getMonth() + 1}
+                            </Text>
+                            <View style={styles.wheelContainer}>
+                                <VerticalWheel
+                                    data={hoursData}
+                                    selectedValue={selHour}
+                                    onValueChange={setSelHour}
+                                />
+                                <Text style={styles.wheelSep}>:</Text>
+                                <VerticalWheel
+                                    data={minutesData}
+                                    selectedValue={selMinute}
+                                    onValueChange={setSelMinute}
+                                />
+                            </View>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Nội dung sự kiện..."
+                                value={noteInput}
+                                onChangeText={setNoteInput}
+                                multiline
+                            />
+                            <View style={styles.modalButtons}>
+                                <TouchableOpacity
+                                    onPress={() => setNoteEditVisible(false)}
+                                    style={styles.btnCancel}
+                                >
+                                    <Text>Hủy</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={saveEvent} style={styles.btnSave}>
+                                    <Text style={{ color: "#fff", fontWeight: "bold" }}>Lưu</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </KeyboardAvoidingView>
                 </Modal>
             </View>
         </Modal>
@@ -270,40 +693,236 @@ const MonthCalendarModal = ({
 };
 
 const styles = StyleSheet.create({
-    fullModal: { flex: 1, backgroundColor: '#fff' },
-    monthHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 10, borderBottomWidth: 0.5, borderBottomColor: '#eee' },
-    closeBtn: { padding: 5 },
-    closeBtnTxt: { fontSize: 16, color: '#2980b9', fontWeight: 'bold' },
-    headerTitle: { fontSize: 18, fontWeight: 'bold' },
-    calendarContainer: { height: height * 0.42, backgroundColor: '#fff' },
-    monthLabel: { fontSize: 18, fontWeight: 'bold', color: '#c0392b', textAlign: 'center', marginVertical: 8 },
-    weekHeader: { flexDirection: 'row', paddingVertical: 5 },
-    weekDay: { flex: 1, textAlign: 'center', fontWeight: 'bold', fontSize: 13, color: '#7f8c8d' },
-    cellWrapper: { flex: 1 / 7, aspectRatio: 1, alignItems: 'center', justifyContent: 'center' },
-    dayCell: { width: '85%', height: '85%', alignItems: 'center', justifyContent: 'center' },
-    dayCellText: { fontSize: 16, color: '#2c3e50' },
-    todayCell: { backgroundColor: '#ffecec', borderRadius: 8, borderWidth: 1, borderColor: '#c0392b' },
-    clickedCell: { backgroundColor: '#e3f2fd', borderRadius: 8, borderWidth: 1.5, borderColor: '#3498db' },
-    cellLeTrong: { borderWidth: 1, borderColor: '#c0392b', borderRadius: 8, backgroundColor: '#fffcfc' },
-    dotMauAo: { width: 4, height: 4, borderRadius: 2, position: 'absolute', bottom: 4 },
-    infoBox: { flex: 1, paddingHorizontal: 20, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#f0f0f0' },
-    infoTextMain: { fontSize: 28, fontWeight: 'bold', color: '#c0392b', marginTop: 10 },
-    dividerSmall: { width: 40, height: 3, backgroundColor: '#c0392b', borderRadius: 2, marginVertical: 5 },
-    infoTextSub: { fontSize: 17, color: '#34495e', textAlign: 'center', fontWeight: 'bold', marginBottom: 10 },
-    summaryText: { textAlign: 'center', color: '#555', fontSize: 14, paddingHorizontal: 15 },
-    noteText: { textAlign: 'center', color: '#bdc3c7', fontSize: 12, marginTop: 12, fontStyle: 'italic' },
-    placeholderText: { textAlign: 'center', marginTop: 100, color: '#bdc3c7' },
-    dotsContainer: { flexDirection: 'row', justifyContent: 'center', paddingVertical: 10 },
+    fullModal: { flex: 1, backgroundColor: "#fff" },
+    monthHeaderRow: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        padding: 10,
+        borderBottomWidth: 0.5,
+        borderBottomColor: "#eee",
+    },
+    closeBtnTxt: { fontSize: 16, color: "#2980b9", fontWeight: "bold" },
+    headerTitle: { fontSize: 18, fontWeight: "bold" },
+    calendarContainer: { height: height * 0.42 },
+    monthLabel: {
+        fontSize: 18,
+        fontWeight: "bold",
+        color: "#c0392b",
+        textAlign: "center",
+        marginVertical: 8,
+    },
+    weekHeader: { flexDirection: "row", paddingVertical: 5 },
+    weekDay: {
+        flex: 1,
+        textAlign: "center",
+        fontWeight: "bold",
+        fontSize: 13,
+        color: "#7f8c8d",
+    },
+    cellWrapper: {
+        flex: 1 / 7,
+        aspectRatio: 1,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    dayCell: {
+        width: "85%",
+        height: "85%",
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    dayCellText: { fontSize: 16 },
+    todayCell: {
+        backgroundColor: "#ffecec",
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: "#c0392b",
+    },
+    clickedCell: {
+        backgroundColor: "#e3f2fd",
+        borderRadius: 8,
+        borderWidth: 1.5,
+        borderColor: "#3498db",
+    },
+    cellLeTrong: { borderWidth: 1, borderColor: "#c0392b", borderRadius: 8 },
+    dotMauAo: {
+        width: 4,
+        height: 4,
+        borderRadius: 2,
+        position: "absolute",
+        bottom: 4,
+    },
+    noteIndicator: {
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        backgroundColor: "#f39c12",
+        position: "absolute",
+        top: 2,
+        right: 2,
+    },
+    infoBox: { flex: 1, paddingHorizontal: 20 },
+    switchContainer: {
+        flexDirection: "row",
+        backgroundColor: "#f1f2f6",
+        borderRadius: 10,
+        padding: 4,
+        marginVertical: 10,
+    },
+    switchBtn: {
+        flex: 1,
+        paddingVertical: 8,
+        alignItems: "center",
+        borderRadius: 8,
+    },
+    switchBtnActive: { backgroundColor: "#fff" },
+    switchText: { fontSize: 14, color: "#7f8c8d" },
+    switchTextActive: { color: "#c0392b", fontWeight: "bold" },
+    infoTextSub: {
+        fontSize: 17,
+        color: "#34495e",
+        textAlign: "center",
+        fontWeight: "bold",
+        marginBottom: 5,
+    },
+    summaryText: {
+        textAlign: "center",
+        color: "#555",
+        fontSize: 14,
+        paddingHorizontal: 15,
+    },
+    dotsContainer: {
+        flexDirection: "row",
+        justifyContent: "center",
+        paddingVertical: 10,
+    },
     dot: { width: 6, height: 6, borderRadius: 3, margin: 3 },
-    activeDot: { backgroundColor: '#c0392b', width: 12 },
-    inactiveDot: { backgroundColor: '#ddd' },
-    detailModalContainer: { flex: 1 },
-    detailControlBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 10, borderBottomWidth: 1 },
-    detailCloseBtn: { padding: 5 },
-    sectionTitle: { fontWeight: 'bold', marginBottom: 5 },
-    chauLuotContainer: { marginTop: 12, backgroundColor: '#f0f7ff', padding: 10, borderRadius: 10, width: '100%' },
-    chauLuotTitle: { fontSize: 13, fontWeight: 'bold', color: '#2980b9', marginBottom: 2 },
-    chauLuotText: { fontSize: 14, color: '#444', fontStyle: 'italic', marginTop: 8 },
+    activeDot: { backgroundColor: "#c0392b", width: 12 },
+    inactiveDot: { backgroundColor: "#ddd" },
+    underTitle: {
+        fontSize: 15,
+        color: "#555",
+        marginTop: 5,
+        textAlign: "center",
+        lineHeight: 20,
+    },
+    chauLuotContainer: {
+        marginTop: 10,
+        backgroundColor: "#f0f7ff",
+        padding: 10,
+        borderRadius: 10,
+        width: "100%",
+    },
+    chauLuotTitle: { fontSize: 13, fontWeight: "bold", color: "#2980b9" },
+    chauLuotText: {
+        fontSize: 14,
+        color: "#444",
+        fontStyle: "italic",
+        marginTop: 5,
+    },
+    noteArea: { marginTop: 5 },
+    noteCard: {
+        backgroundColor: "#fffcf0",
+        borderRadius: 12,
+        padding: 12,
+        marginBottom: 10,
+        flexDirection: "row",
+        borderLeftWidth: 4,
+        borderLeftColor: "#f1c40f",
+    },
+    noteTime: { fontWeight: "bold", color: "#7e5109" },
+    noteText: { color: "#333", marginTop: 2 },
+    noteActionCol: { justifyContent: "space-around", paddingLeft: 10 },
+    editBtn: { color: "#2980b9", marginBottom: 5 },
+    delBtn: { color: "#e74c3c" },
+    addBtn: {
+        backgroundColor: "#c0392b",
+        padding: 12,
+        borderRadius: 10,
+        alignItems: "center",
+    },
+    addBtnTxt: { color: "#fff", fontWeight: "bold" },
+    detailModal: { flex: 1 },
+    detailHeader: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        paddingHorizontal: 20,
+        paddingVertical: 10,
+        borderBottomWidth: 1,
+    },
+    secTitle: {
+        fontWeight: "bold",
+        fontSize: 18,
+        marginTop: 20,
+        marginBottom: 5,
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: "rgba(0,0,0,0.5)",
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    modalContent: {
+        width: "85%",
+        backgroundColor: "#fff",
+        borderRadius: 20,
+        padding: 20,
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: "bold",
+        textAlign: "center",
+        marginBottom: 15,
+    },
+    wheelContainer: {
+        flexDirection: "row",
+        height: 120,
+        backgroundColor: "#f9f9f9",
+        borderRadius: 12,
+        marginBottom: 15,
+        overflow: "hidden",
+    },
+    wheelWrapper: { flex: 1, height: 120 },
+    wheelItem: {
+        height: ITEM_HEIGHT,
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    wheelItemTxt: { color: "#bbb" },
+    wheelItemTxtActive: { color: "#c0392b", fontWeight: "bold", fontSize: 20 },
+    wheelHighlight: {
+        position: "absolute",
+        top: 40,
+        left: 10,
+        right: 10,
+        height: 40,
+        borderTopWidth: 1,
+        borderBottomWidth: 1,
+        borderColor: "#ddd",
+    },
+    wheelSep: { fontSize: 20, fontWeight: "bold", alignSelf: "center" },
+    input: {
+        borderWidth: 1,
+        borderColor: "#ddd",
+        borderRadius: 10,
+        padding: 10,
+        height: 80,
+        textAlignVertical: "top",
+    },
+    modalButtons: {
+        flexDirection: "row",
+        justifyContent: "flex-end",
+        marginTop: 15,
+    },
+    btnCancel: { padding: 10, marginRight: 15 },
+    btnSave: {
+        backgroundColor: "#c0392b",
+        padding: 10,
+        paddingHorizontal: 20,
+        borderRadius: 8,
+    },
 });
 
 export default memo(MonthCalendarModal);
