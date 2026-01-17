@@ -19,10 +19,22 @@ import {
 import PagerView from "react-native-pager-view";
 import RenderHTML from "react-native-render-html";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Notifications from "expo-notifications";
+import * as Device from "expo-device";
+import { Ionicons } from "@expo/vector-icons";
 
 const { width, height } = Dimensions.get("window");
 const NOTES_KEY = "@kinh_user_notes_v6";
 const ITEM_HEIGHT = 40;
+
+// Cấu hình notifications
+Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+    }),
+});
 
 const mapColor = (colorName) => {
     switch (colorName) {
@@ -209,9 +221,34 @@ const MonthCalendarModal = ({
     const [editingId, setEditingId] = useState(null);
     const [pagerHeight, setPagerHeight] = useState(120);
 
+    // Khởi tạo notifications khi component mount
     useEffect(() => {
-        if (visible) loadNotes();
+        if (visible) {
+            loadNotes();
+            checkAndRequestPermissions();
+
+            // KIỂM TRA VÀ RESCHEDULE NOTIFICATIONS KHI MỞ APP
+            checkAndRescheduleAllNotifications();
+        }
     }, [visible]);
+
+    // Kiểm tra và yêu cầu quyền notifications
+    const checkAndRequestPermissions = async () => {
+        if (!Device.isDevice) return;
+
+        const { status: existingStatus } =
+            await Notifications.getPermissionsAsync();
+        let finalStatus = existingStatus;
+
+        if (existingStatus !== "granted") {
+            const { status } = await Notifications.requestPermissionsAsync();
+            finalStatus = status;
+        }
+
+        if (finalStatus !== "granted") {
+            console.log("Chưa cấp quyền thông báo");
+        }
+    };
 
     const loadNotes = async () => {
         const saved = await AsyncStorage.getItem(NOTES_KEY);
@@ -222,29 +259,190 @@ const MonthCalendarModal = ({
         ? `${clickedDate.getFullYear()}-${String(clickedDate.getMonth() + 1).padStart(2, "0")}-${String(clickedDate.getDate()).padStart(2, "0")}`
         : "";
 
-    const saveEvent = async () => {
-        if (!noteInput.trim()) return;
-        const newNotes = { ...notes };
-        const dayEvents = newNotes[currentDateKey] || [];
-        const newEv = {
-            id: editingId || Date.now().toString(),
-            text: noteInput,
-            time: `${selHour}:${selMinute}`,
-        };
-        if (editingId) {
-            newNotes[currentDateKey] = dayEvents.map((e) =>
-                e.id === editingId ? newEv : e,
+    // HÀM CHÍNH: Schedule notification cho 18:31 ngày hôm trước sự kiện
+    const scheduleNotificationForEvent = async (eventDate, eventCount) => {
+        try {
+            // Tạo thời điểm thông báo: 18:31 ngày hôm trước
+            const notificationTime = new Date(eventDate);
+            notificationTime.setDate(notificationTime.getDate() - 1); // Ngày hôm trước
+            notificationTime.setHours(21, 0, 0, 0);
+
+            // Kiểm tra nếu thời gian trong quá khứ thì không schedule
+            if (notificationTime <= new Date()) {
+                console.log("Thời gian thông báo đã qua, không schedule");
+                return null;
+            }
+
+            // Tạo ID duy nhất cho notification (dùng date làm key)
+            const notificationId = `event_${eventDate.getFullYear()}_${eventDate.getMonth() + 1}_${eventDate.getDate()}`;
+
+            // Schedule notification
+            await Notifications.scheduleNotificationAsync({
+                content: {
+                    title: "Sự kiện ngày mai",
+                    body: `Bạn có ${eventCount} sự kiện vào ngày mai`,
+                    data: {
+                        type: "daily_reminder",
+                        date: eventDate.toISOString(),
+                        dateKey: `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, "0")}-${String(eventDate.getDate()).padStart(2, "0")}`,
+                        count: eventCount,
+                    },
+                    sound: true,
+                    priority: Notifications.AndroidNotificationPriority.HIGH,
+                },
+                trigger: {
+                    type: "date",
+                    date: notificationTime,
+                },
+            });
+
+            console.log(
+                `✅ Đã lên lịch thông báo cho ngày ${eventDate.toLocaleDateString("vi-VN")} lúc 18:31`,
             );
-        } else {
-            newNotes[currentDateKey] = [...dayEvents, newEv].sort((a, b) =>
-                a.time.localeCompare(b.time),
+            console.log(
+                `   Thông báo vào: ${notificationTime.toLocaleString("vi-VN")}`,
             );
+            return notificationId;
+        } catch (error) {
+            console.error("❌ Lỗi schedule notification:", error);
+            return null;
         }
-        setNotes(newNotes);
-        await AsyncStorage.setItem(NOTES_KEY, JSON.stringify(newNotes));
-        setNoteEditVisible(false);
-        setEditingId(null);
-        setNoteInput("");
+    };
+
+    // Hàm kiểm tra và schedule notification khi có sự kiện mới
+    const checkAndScheduleNotifications = async (updatedNotes) => {
+        try {
+            console.log("🔄 Bắt đầu kiểm tra và schedule notifications...");
+
+            // Lấy tất cả notification đã schedule để tránh trùng lặp
+            const existingNotifications =
+                await Notifications.getAllScheduledNotificationsAsync();
+            console.log(
+                `📋 Có ${existingNotifications.length} notifications đang chờ`,
+            );
+
+            // Duyệt qua tất cả các ngày có sự kiện
+            Object.keys(updatedNotes).forEach((dateKey) => {
+                const eventCount = updatedNotes[dateKey].length;
+                if (eventCount > 0) {
+                    // Parse date từ key
+                    const [year, month, day] = dateKey.split("-").map(Number);
+                    const eventDate = new Date(year, month - 1, day);
+
+                    // Kiểm tra nếu đã có notification cho ngày này chưa
+                    const alreadyScheduled = existingNotifications.some(
+                        (notif) => notif.content.data?.dateKey === dateKey,
+                    );
+
+                    if (!alreadyScheduled) {
+                        console.log(
+                            `Schedule notification cho ngày ${dateKey} (${eventCount} sự kiện)`,
+                        );
+                        scheduleNotificationForEvent(eventDate, eventCount);
+                    } else {
+                        console.log(`Đã có notification cho ngày ${dateKey}, bỏ qua`);
+                    }
+                }
+            });
+
+            console.log("✅ Hoàn thành kiểm tra notifications");
+        } catch (error) {
+            console.error("Lỗi kiểm tra notifications:", error);
+        }
+    };
+
+    // Hàm reschedule tất cả notifications (khi mở app)
+    const checkAndRescheduleAllNotifications = async () => {
+        try {
+            console.log("Kiểm tra và reschedule tất cả notifications...");
+
+            // Load notes từ AsyncStorage
+            const savedNotes = await AsyncStorage.getItem(NOTES_KEY);
+            if (!savedNotes) return;
+
+            const notesData = JSON.parse(savedNotes);
+
+            // Xóa tất cả notifications cũ
+            await Notifications.cancelAllScheduledNotificationsAsync();
+            console.log("Đã xóa tất cả notifications cũ");
+
+            // Schedule lại notifications mới
+            await checkAndScheduleNotifications(notesData);
+
+            console.log("✅ Đã reschedule tất cả notifications");
+        } catch (error) {
+            console.error("Lỗi reschedule notifications:", error);
+        }
+    };
+
+    // Hàm xóa notification khi xóa hết sự kiện của một ngày
+    const removeNotificationForDate = async (dateKey) => {
+        try {
+            const scheduledNotifications =
+                await Notifications.getAllScheduledNotificationsAsync();
+
+            // Tìm notification cho dateKey này
+            const notificationToRemove = scheduledNotifications.find(
+                (notif) => notif.content.data?.dateKey === dateKey,
+            );
+
+            if (notificationToRemove) {
+                // Tìm ID của notification (trong data hoặc dùng trigger date)
+                // Expo không cung cấp ID trực tiếp, nên cần cancel bằng cách khác
+                // Ở đây chúng ta sẽ cancel all và reschedule lại (đơn giản nhất)
+                await checkAndRescheduleAllNotifications();
+                console.log(`🗑️ Đã xóa notification cho ngày ${dateKey}`);
+            }
+        } catch (error) {
+            console.error("Lỗi xóa notification:", error);
+        }
+    };
+
+    const saveEvent = async () => {
+        if (!noteInput.trim()) {
+            Alert.alert("Lỗi", "Vui lòng nhập nội dung sự kiện");
+            return;
+        }
+
+        try {
+            const newNotes = { ...notes };
+            const dayEvents = newNotes[currentDateKey] || [];
+            const newEv = {
+                id: editingId || Date.now().toString(),
+                text: noteInput,
+                time: `${selHour}:${selMinute}`,
+            };
+
+            if (editingId) {
+                newNotes[currentDateKey] = dayEvents.map((e) =>
+                    e.id === editingId ? newEv : e,
+                );
+            } else {
+                newNotes[currentDateKey] = [...dayEvents, newEv].sort((a, b) =>
+                    a.time.localeCompare(b.time),
+                );
+            }
+
+            setNotes(newNotes);
+            await AsyncStorage.setItem(NOTES_KEY, JSON.stringify(newNotes));
+
+            // Sau khi lưu sự kiện, kiểm tra và schedule notification
+            await checkAndScheduleNotifications(newNotes);
+
+            setNoteEditVisible(false);
+            setEditingId(null);
+            setNoteInput("");
+            setSelHour("05");
+            setSelMinute("00");
+
+            Alert.alert(
+                "Thành công",
+                editingId ? "Đã cập nhật sự kiện" : "Đã thêm sự kiện mới",
+            );
+        } catch (error) {
+            console.error("Lỗi lưu sự kiện:", error);
+            Alert.alert("Lỗi", "Không thể lưu sự kiện");
+        }
     };
 
     const deleteEvent = (id) => {
@@ -254,14 +452,30 @@ const MonthCalendarModal = ({
                 text: "Xóa",
                 style: "destructive",
                 onPress: async () => {
-                    const newNotes = { ...notes };
-                    newNotes[currentDateKey] = newNotes[currentDateKey].filter(
-                        (e) => e.id !== id,
-                    );
-                    if (newNotes[currentDateKey].length === 0)
-                        delete newNotes[currentDateKey];
-                    setNotes(newNotes);
-                    await AsyncStorage.setItem(NOTES_KEY, JSON.stringify(newNotes));
+                    try {
+                        const newNotes = { ...notes };
+                        newNotes[currentDateKey] = newNotes[currentDateKey].filter(
+                            (e) => e.id !== id,
+                        );
+
+                        // Kiểm tra nếu ngày này không còn sự kiện nào
+                        if (newNotes[currentDateKey].length === 0) {
+                            // Xóa notification cho ngày này
+                            await removeNotificationForDate(currentDateKey);
+                            delete newNotes[currentDateKey];
+                        }
+
+                        setNotes(newNotes);
+                        await AsyncStorage.setItem(NOTES_KEY, JSON.stringify(newNotes));
+
+                        // Cập nhật notifications sau khi xóa
+                        await checkAndScheduleNotifications(newNotes);
+
+                        Alert.alert("Thành công", "Đã xóa sự kiện");
+                    } catch (error) {
+                        console.error("Lỗi xóa sự kiện:", error);
+                        Alert.alert("Lỗi", "Không thể xóa sự kiện");
+                    }
                 },
             },
         ]);
@@ -396,7 +610,7 @@ const MonthCalendarModal = ({
                                     viewMode === "NOTE" && styles.switchTextActive,
                                 ]}
                             >
-                                Sự kiện ({notes[currentDateKey]?.length || 0})
+                                Sự kiện của bạn ({notes[currentDateKey]?.length || 0})
                             </Text>
                         </TouchableOpacity>
                     </View>
@@ -485,29 +699,32 @@ const MonthCalendarModal = ({
                         ) : (
                             <View style={styles.noteArea}>
                                 {notes[currentDateKey]?.map((item) => (
-                                    <View key={item.id} style={styles.noteCard}>
+                                    <TouchableOpacity
+                                        key={item.id}
+                                        style={styles.noteCard}
+                                        onPress={() => {
+                                            setEditingId(item.id);
+                                            setNoteInput(item.text);
+                                            const [h, m] = item.time.split(":");
+                                            setSelHour(h);
+                                            setSelMinute(m);
+                                            setNoteEditVisible(true);
+                                        }}
+                                    >
                                         <View style={{ flex: 1 }}>
                                             <Text style={styles.noteTime}>⏰ {item.time}</Text>
                                             <Text style={styles.noteText}>{item.text}</Text>
                                         </View>
                                         <View style={styles.noteActionCol}>
-                                            <TouchableOpacity
-                                                onPress={() => {
-                                                    setEditingId(item.id);
-                                                    setNoteInput(item.text);
-                                                    const [h, m] = item.time.split(":");
-                                                    setSelHour(h);
-                                                    setSelMinute(m);
-                                                    setNoteEditVisible(true);
-                                                }}
-                                            >
-                                                <Text style={styles.editBtn}>Sửa</Text>
-                                            </TouchableOpacity>
                                             <TouchableOpacity onPress={() => deleteEvent(item.id)}>
-                                                <Text style={styles.delBtn}>Xóa</Text>
+                                                <Ionicons
+                                                    name="trash-outline"
+                                                    size={20}
+                                                    color="#ff4d4d"
+                                                />
                                             </TouchableOpacity>
                                         </View>
-                                    </View>
+                                    </TouchableOpacity>
                                 ))}
                                 <TouchableOpacity
                                     style={styles.addBtn}
