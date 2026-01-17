@@ -12,6 +12,7 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
+    "plugins": [["expo-notifications"]],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.application.tgphn",
