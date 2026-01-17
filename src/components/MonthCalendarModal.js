@@ -27,15 +27,6 @@ const { width, height } = Dimensions.get("window");
 const NOTES_KEY = "@kinh_user_notes_v6";
 const ITEM_HEIGHT = 40;
 
-// Cấu hình notifications
-Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-        shouldShowAlert: true,
-        shouldPlaySound: true,
-        shouldSetBadge: false,
-    }),
-});
-
 const mapColor = (colorName) => {
     switch (colorName) {
         case "Tím":
