@@ -87,7 +87,7 @@ export default function ChiTietKinhScreen({ route }) {
         () => ({
             body: { color: colors.text },
             h1: { fontSize: 22 * fontScale, fontWeight: "bold", textAlign: "center", marginBottom: 16, color: colors.title },
-            h2: { fontSize: 18 * fontScale, fontWeight: "bold", marginVertical: 10, color: colors.title },
+            h2: { fontSize: 18 * fontScale, fontWeight: "bold", textAlign: "center", marginVertical: 10, color: colors.title },
             h3: { fontSize: 17 * fontScale, fontWeight: "bold", marginVertical: 8, color: colors.title },
             h4: { fontSize: 16 * fontScale, fontWeight: "bold", marginVertical: 6, color: colors.title },
             p: { fontSize: 18 * fontScale, lineHeight: 30 * fontScale, marginBottom: 10, color: colors.text },
@@ -106,7 +106,8 @@ export default function ChiTietKinhScreen({ route }) {
             indent: {marginHorizontal: 10},
             red: {color: '#ff0000'},
             italic: {fontStyle:"italic"},
-            exception: {backgroundColor: '#e0e0e0d8', padding: 10}
+            exception: {backgroundColor: '#e0e0e0d8', padding: 10},
+            bold: {fontWeight: 'bold'}
         }),
         [fontScale, colors]
     );
