@@ -641,13 +641,13 @@ const MonthCalendarModal = ({
                                             >
                                                 <Text style={styles.infoTextSub}>{le.title}</Text>
                                                 <Text style={styles.summaryText}>
-                                                    {le.ban_van?.bd1_le_trich_tu || le.bd_1}
+                                                    {le.ban_van?.bd1_le_trich_tu
+                                                        ?`${le.ban_van.bd2_trich_tu}; `
+                                                        : ""}
                                                     {le.ban_van?.bd2_trich_tu
-                                                        ? `; ${le.ban_van.bd2_trich_tu}`
-                                                        : le.bd_2
-                                                            ? `; ${le.bd_2}`
-                                                            : ""}
-                                                    {`; ${le.ban_van?.phuc_am_trich_tu || le.tin_mung || ""}`}
+                                                        ? `${le.ban_van.bd2_trich_tu};`                                    
+                                                        : ""}
+                                                    {`${le.ban_van?.phuc_am_trich_tu}`}
                                                 </Text>
                                             </TouchableOpacity>
                                         ))}
