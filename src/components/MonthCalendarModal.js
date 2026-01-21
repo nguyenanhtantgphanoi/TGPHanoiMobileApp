@@ -953,7 +953,7 @@ const styles = StyleSheet.create({
         borderWidth: 1.5,
         borderColor: "#3498db",
     },
-    cellLeTrong: { borderWidth: 1, borderColor: "#c0392b", borderRadius: 8 },
+    cellLeTrong: { borderWidth: 1, borderColor: "#c0392b", borderRadius: 8, color: "rgba(221, 191, 57, 0.71)" },
     dotMauAo: {
         width: 4,
         height: 4,
