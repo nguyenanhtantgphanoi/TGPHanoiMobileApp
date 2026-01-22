@@ -4,6 +4,7 @@ import {
     StyleSheet,
     Text,
     View,
+    SafeAreaView,
     ActivityIndicator,
     Dimensions,
     Image,
@@ -45,15 +46,17 @@ for (let y = 2025; y <= 2026; y++) {
 
 const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible }) => {
     const dateObj = new Date(item.date);
-    const daysOfWeek = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+    const daysOfWeek = ['Chúa Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
     const solar = Solar.fromYmd(dateObj.getFullYear(), dateObj.getMonth() + 1, dateObj.getDate());
     const lunar = solar.getLunar();
     const listLe = useMemo(() => item.arr_cac_le?.length ? item.arr_cac_le : [item], [item.arr_cac_le, item]);
     const [activeLeIndex, setActiveLeIndex] = useState(0);
-
+    const lunarChi = ["Thân", "Dậu", "Tuất", "Hợi", "Tý", "Sửu", "Dần", "Mão", "Thìn", "Tỵ", "Ngọ", "Mùi"]
+    const lunarCan = ["Canh", "Tân", "Nhâm", "Quý", "Giáp", "Ất", "Bính", "Đinh", "Mậu", "Kỷ"]
     return (
-        <View style={styles.page}>
-            <View style={[styles.topBlock, { marginTop: insets.top + 15 }]}>
+        // <View style={[styles.page, styles.container_x]}>
+        <View style={[styles.page, styles.container_x]}>
+            {/* <View style={[styles.topBlock, { marginTop: insets.top + 15 }]}>
                 <Text style={styles.dayNameText}>{daysOfWeek[dateObj.getDay()].toUpperCase()}</Text>
                 <View style={styles.mainDateContainer}>
                     <Text style={styles.dayNumText}>{dateObj.getDate()}</Text>
@@ -62,6 +65,14 @@ const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible }) => {
                 <View style={styles.topFooter}>
                     <Text style={styles.lunarText}>Lịch âm: <Text style={styles.lunarDateHighlight}>{lunar.getDay()}/{lunar.getMonth()}</Text></Text>
                 </View>
+            </View> */}
+            <View style={[styles.dateBanner, { marginTop: insets.top + 15 }]}>                   
+                <Text style={styles.dayNumber}>{dateObj.getDate()}</Text>
+                <View style={styles.dateTextContainer}>
+                    <Text style={styles.weekDay}>{daysOfWeek[dateObj.getDay()].toUpperCase()}</Text>
+                    <Text style={styles.fullDate}>THÁNG {dateObj.getMonth() + 1} NĂM {dateObj.getFullYear()}</Text>
+                    <Text style={styles.lunarText}>{lunar.getDay()}/{lunar.getMonth()}/{lunarCan[lunar.getYear()%10]} {lunarChi[lunar.getYear()%12]} </Text>
+                </View>                                                    
             </View>
             <View style={[styles.bottomBlock, { marginBottom: 60 }]}>
                 <PagerView style={styles.pagerLe} initialPage={0} onPageSelected={e => setActiveLeIndex(e.nativeEvent.position)}>
@@ -286,7 +297,7 @@ const styles = StyleSheet.create({
     dayNumText: { fontSize: 90, fontWeight: 'bold' },
     monthYearText: { fontSize: 18, fontWeight: '700' },
     topFooter: { paddingTop: 10 },
-    lunarText: { fontSize: 16 },
+    lunarText: { fontSize: 18, color:"#fff" },
     lunarDateHighlight: { color: '#c0392b', fontWeight: 'bold' },
     bottomBlock: { width: width * 0.92, height: height * 0.32, backgroundColor: 'rgba(255,255,255,0.8)', borderRadius: 28 },
     pagerLe: { flex: 1 },
@@ -309,6 +320,104 @@ const styles = StyleSheet.create({
     closeButtonText: { fontSize: 16, fontWeight: 'bold' },
     modalScrollContent: { padding: 20 },
     sectionTitle: { fontWeight: 'bold', marginBottom: 5 },
+
+    container_x: {
+        flex: 1,        
+        alignItems: 'center',
+    },
+
+    dateBanner: {
+        flexDirection: 'row',
+        // backgroundColor: "rgba(33, 100, 100, 0.94)",
+        backgroundColor: "rgba(8, 128, 175, 0.94)",
+        borderRadius: 20,
+        paddingVertical: 16,
+        paddingHorizontal: 24,
+        marginTop: 24,
+        alignItems: 'center',
+    },
+
+    dayNumber: {
+        fontSize: 95,
+        fontWeight: '900',
+        color: '#ffffffee',
+        marginRight: 16,
+    },
+
+    dateTextContainer: {
+        justifyContent: 'center',
+    },
+
+    weekDay: {
+        fontSize: 35,
+        fontWeight: '800',
+        color: '#FFF',
+    },
+
+    fullDate: {
+        fontSize: 20,
+        fontWeight: '600',
+        color: '#FFF',
+        marginTop: 4,
+    },
+    vestment: {
+        width: 90,
+        height: 120,
+        marginVertical: 16,
+    },
+
+    selector: {
+        flexDirection: 'row',
+        backgroundColor: '#FFF',
+        borderRadius: 24,
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+
+    selectorText: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: "#ADF",
+        marginHorizontal: 12,
+    },
+
+    arrow: {
+        fontSize: 24,
+        color: "#ADF",
+        fontWeight: '700',
+    },
+
+    card: {
+        backgroundColor: "#CAD",
+        borderRadius: 20,
+        padding: 20,
+        width: '85%',
+        marginBottom: 24,
+    },
+
+    cardTitle: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#333',
+    },
+
+    cardText: {
+        fontSize: 18,
+        color: '#333',
+        marginTop: 4,
+        lineHeight: 26,
+    },
+
+    cathedral: {
+        position: 'absolute',
+        bottom: 0,
+        width: '100%',
+        height: 180,
+        opacity: 0.9,
+    },
+
 });
 
 export default LichCongGiaoScreen;
