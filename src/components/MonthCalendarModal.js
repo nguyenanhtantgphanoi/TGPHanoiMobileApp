@@ -510,7 +510,7 @@ const MonthCalendarModal = ({
                 marginBottom: 10,
                 color: modalColors.text,
                 fontSize: 17 * fontScale,
-                textAlign: "right",
+                textAlign: "justify",
                 
             },
             strong: { fontWeight: "bold", color: modalColors.text },

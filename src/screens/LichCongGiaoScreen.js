@@ -71,9 +71,12 @@ const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible }) => {
                 <View style={styles.dateTextContainer}>
                     <Text style={styles.weekDay}>{daysOfWeek[dateObj.getDay()].toUpperCase()}</Text>
                     <Text style={styles.fullDate}>THÁNG {dateObj.getMonth() + 1} NĂM {dateObj.getFullYear()}</Text>
-                    <Text style={styles.lunarText}>{lunar.getDay()}/{lunar.getMonth()}/{lunarCan[lunar.getYear()%10]} {lunarChi[lunar.getYear()%12]} </Text>
+                    {/* <Text style={styles.lunarText}>{lunar.getDay()}/{lunar.getMonth()}/{lunarCan[lunar.getYear()%10]} {lunarChi[lunar.getYear()%12]} </Text> */}
                 </View>                                                    
             </View>
+            {/* <View>
+                <Text style={styles.lunarText}>{lunar.getDay()}/{lunar.getMonth()}/{lunarCan[lunar.getYear()%10]} {lunarChi[lunar.getYear()%12]} </Text>
+            </View> */}
             <View style={[styles.bottomBlock, { marginBottom: 60 }]}>
                 <PagerView style={styles.pagerLe} initialPage={0} onPageSelected={e => setActiveLeIndex(e.nativeEvent.position)}>
                     {listLe.map((le, idx) => {
@@ -97,7 +100,16 @@ const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible }) => {
                 {listLe.length > 1 && (
                     <View style={styles.dotsContainer}>{listLe.map((_, i) => (<View key={`dot-${i}`} style={[styles.dot, activeLeIndex === i ? styles.activeDot : styles.inactiveDot]} />))}</View>
                 )}
+                {item?.xu_chau_luot && (
+                    <View style={styles.chauLuotContainer}>
+                        <Text style={styles.chauLuotTitle}>⛪ Chầu lượt:</Text>
+                        <Text style={styles.chauLuotText}>
+                            {item.xu_chau_luot.trim()} Chầu Mình Thánh
+                        </Text>
+                    </View>
+                )}
             </View>
+            
         </View>
     );
 });
@@ -191,7 +203,7 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
 
     const tagsStyles = useMemo(() => ({
         body: { color: modalColors.text, fontSize: 17 * fontScale, lineHeight: 28 * fontScale },
-        p: { marginBottom: 10, color: modalColors.text, fontSize: 17 * fontScale },
+        p: { marginBottom: 10, color: modalColors.text, fontSize: 17 * fontScale,textAlign: "justify" },
         strong: { fontWeight: "bold", color: modalColors.text },
         em: { fontStyle: "italic", color: modalColors.text }
     }), [fontScale, modalColors]);
@@ -292,13 +304,14 @@ const styles = StyleSheet.create({
     loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     page: { flex: 1, alignItems: 'center', justifyContent: 'space-between' },
     topBlock: { width: width * 0.9, backgroundColor: 'rgba(255,255,255,0.75)', borderRadius: 24, padding: 20, alignItems: 'center' },
-    dayNameText: { fontSize: 24, fontWeight: '900', color: '#c0392b' },
+    dayNameText: { fontSize: 24, fontWeight: '900', color: '#c0392b'},
     mainDateContainer: { alignItems: 'center' },
     dayNumText: { fontSize: 90, fontWeight: 'bold' },
     monthYearText: { fontSize: 18, fontWeight: '700' },
     topFooter: { paddingTop: 10 },
     lunarText: { fontSize: 18, color:"#fff" },
     lunarDateHighlight: { color: '#c0392b', fontWeight: 'bold' },
+
     bottomBlock: { width: width * 0.92, height: height * 0.32, backgroundColor: 'rgba(255,255,255,0.8)', borderRadius: 28 },
     pagerLe: { flex: 1 },
     lePage: { flex: 1, justifyContent: 'center', padding: 15, borderRadius: 16 },
@@ -416,6 +429,22 @@ const styles = StyleSheet.create({
         width: '100%',
         height: 180,
         opacity: 0.9,
+    },
+    chauLuotContainer: {
+        // marginBottom: 5,
+        backgroundColor: "#f0f7ff",
+        padding: 10,
+        borderRadius: 24,        
+        borderTopLeftRadius: 0,
+        borderTopRightRadius: 0,
+        width: "100%",
+    },
+    chauLuotTitle: { fontSize: 15, fontWeight: "bold", color: "#2980b9" },
+    chauLuotText: {
+        fontSize: 15,
+        color: "#444",
+        fontStyle: "italic",
+        marginTop: 5,
     },
 
 });
