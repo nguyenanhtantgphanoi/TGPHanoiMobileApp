@@ -510,6 +510,8 @@ const MonthCalendarModal = ({
                 marginBottom: 10,
                 color: modalColors.text,
                 fontSize: 17 * fontScale,
+                textAlign: "right",
+                
             },
             strong: { fontWeight: "bold", color: modalColors.text },
             em: { fontStyle: "italic", color: modalColors.text },
@@ -642,12 +644,14 @@ const MonthCalendarModal = ({
                                                 <Text style={styles.infoTextSub}>{le.title}</Text>
                                                 <Text style={styles.summaryText}>
                                                     {le.ban_van?.bd1_le_trich_tu
-                                                        ?`${le.ban_van.bd2_trich_tu}; `
+                                                        ?`${le.ban_van.bd1_le_trich_tu}; `
                                                         : ""}
                                                     {le.ban_van?.bd2_trich_tu
                                                         ? `${le.ban_van.bd2_trich_tu};`                                    
                                                         : ""}
-                                                    {`${le.ban_van?.phuc_am_trich_tu}`}
+                                                    {le.ban_van?.phuc_am_trich_tu
+                                                        ?`${le.ban_van?.phuc_am_trich_tu}`
+                                                        : ""}
                                                 </Text>
                                             </TouchableOpacity>
                                         ))}
@@ -953,7 +957,7 @@ const styles = StyleSheet.create({
         borderWidth: 1.5,
         borderColor: "#3498db",
     },
-    cellLeTrong: { borderWidth: 1, borderColor: "#c0392b", borderRadius: 8, color: "rgba(221, 191, 57, 0.71)" },
+    cellLeTrong: {backgroundColor: "#ebdb0569", borderRadius: 8 },
     dotMauAo: {
         width: 4,
         height: 4,
