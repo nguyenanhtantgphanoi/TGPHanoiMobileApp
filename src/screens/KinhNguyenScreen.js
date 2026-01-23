@@ -187,13 +187,13 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         backgroundColor: "#c56901",
         borderRadius: 8,
-        alignItems: "center",
+        alignItems: "left",
     },
 
     viewDetailsBtnText: {
         fontSize: 20,
         paddingVertical: 3,
-        textAlign: "center",
+        textAlign: "left",
         fontWeight: "600",
         color: "#fff",
     },
