@@ -11,6 +11,7 @@ import RenderHTML from "react-native-render-html";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useIsFocused } from "@react-navigation/native"; // Cần thiết để đồng bộ
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 /* ================= CONSTANT (DÙNG CHUNG) ================= */
 const FONT_SCALE_KEY = "@kinh_font_scale";
@@ -24,7 +25,7 @@ const extractBodyHTML = (html) => {
 };
 
 /* ================= SCREEN ================= */
-export default function ChiTietKinhScreen({ route }) {
+export default function ChiTietKinhScreen({ route, navigation }) {
     const { html } = route.params;
     const { width } = useWindowDimensions();
     const isFocused = useIsFocused(); // Theo dõi trạng thái màn hình
@@ -137,6 +138,10 @@ export default function ChiTietKinhScreen({ route }) {
                 }}
             >
                 <View style={{ flexDirection: "row", alignItems: "center" }}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginRight: 12 }}>
+                        <MaterialIcons name="arrow-back" size={24} color={colors.text} />
+                    </TouchableOpacity>
+
                     <TouchableOpacity onPress={() => updateFontScale(fontScale - 0.1)}>
                         <Text style={{ fontSize: 18, color: colors.text }}>A−</Text>
                     </TouchableOpacity>

@@ -4,6 +4,7 @@ import {
     ActivityIndicator, TouchableOpacity
 } from 'react-native';
 import axios from 'axios';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 export default function GiaoHatScreen({ navigation }) {
     const [giaoHatList, setGiaoHatList] = useState([]);
@@ -69,8 +70,13 @@ export default function GiaoHatScreen({ navigation }) {
     );
 
     return (
-        <View style={{ flex: 1, backgroundColor: '#fff', paddingTop: 60 }}>
-            <Text style={styles.header}>Giáo Hạt</Text>
+        <View style={{ flex: 1, backgroundColor: '#c2850bde', paddingTop: 60 }}>
+            <View style={styles.headerContainer}>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                    <MaterialIcons name="arrow-back" size={24} color="#000" />
+                </TouchableOpacity>
+                <Text style={styles.header}>Giáo Hạt</Text>
+            </View>
             <FlatList
                 data={giaoHatList}
                 keyExtractor={(item, index) => item.giaoHat + index}
@@ -85,12 +91,21 @@ const styles = StyleSheet.create({
     center: {
         flex: 1, justifyContent: 'center', alignItems: 'center'
     },
+    headerContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        marginBottom: 10,
+    },
+    backButton: {
+        padding: 8,
+        marginRight: 10,
+    },
     header: {
         fontSize: 22,
         fontWeight: 'bold',
-        marginHorizontal: 16,
-        marginBottom: 10,
         color: '#222',
+        flex: 1,
     },
     card: {
         marginHorizontal: 16,

@@ -93,8 +93,9 @@ const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible }) => {
                 )}
                 {item?.xu_chau_luot && (
                     <View style={styles.chauLuotContainer}>
-                        <Text style={styles.chauLuotTitle}>⛪ Chầu lượt:</Text>
+                        
                         <Text style={styles.chauLuotText}>
+                            <Image style={{height:30, width: 30}} source={require('../../assets/images/monstrance_1.png')}/> 
                             {item.xu_chau_luot.trim()} Chầu Mình Thánh
                         </Text>
                     </View>
@@ -295,26 +296,26 @@ const styles = StyleSheet.create({
     loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     page: { flex: 1, alignItems: 'center', justifyContent: 'space-between' },
     topBlock: { width: width * 0.9, backgroundColor: 'rgba(255,255,255,0.75)', borderRadius: 24, padding: 20, alignItems: 'center' },
-    dayNameText: { fontSize: 24, fontWeight: '900', color: '#c0392b'},
+    dayNameText: { fontSize: 24, fontWeight: '900', color: '#c0392b', fontFamily: 'System', textTransform: 'uppercase'},
     mainDateContainer: { alignItems: 'center' },
-    dayNumText: { fontSize: 90, fontWeight: 'bold' },
-    monthYearText: { fontSize: 18, fontWeight: '700' },
+    dayNumText: { fontSize: 100, fontWeight: '900' },
+    monthYearText: { fontSize: 18, fontWeight: '900' },
     topFooter: { paddingTop: 10 },
     lunarText: { fontSize: 18, color:"#fff" },
-    lunarDateHighlight: { color: '#c0392b', fontWeight: 'bold' },
+    lunarDateHighlight: { fontSize: 18, color: '#c0392b', fontWeight: 'bold' },
 
-    bottomBlock: { width: width * 0.92, height: height * 0.32, backgroundColor: 'rgba(255,255,255,0.8)', borderRadius: 28 },
-    pagerLe: { flex: 1 },
-    lePage: { flex: 1, justifyContent: 'center', padding: 15, borderRadius: 16 },
-    titleText: { fontSize: 18, fontWeight: 'bold', textAlign: 'center', color: '#c0392b' },
+    bottomBlock: { width: width * 0.92, minHeight: 200, backgroundColor: 'rgba(255,255,255,0.8)', borderRadius: 28, paddingTop: 10, flexShrink: 0 },
+    pagerLe: { height: 'auto', minHeight: 180 },
+    lePage: { padding: 15, borderRadius: 16, justifyContent: 'flex-start' },
+    titleText: { fontSize: 20, fontWeight: 'bold', textAlign: 'center', color: '#c0392b' },
     infoRow: { alignItems: 'center' },
-    aoLeIcon: { width: 40, height: 40 },
+    aoLeIcon: { width: 40, height: 40, marginVertical: 10 },
     tag: { backgroundColor: '#2980b9', padding: 5, borderRadius: 6 },
     tagText: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
     summaryContainer: { paddingHorizontal: 10 },
     summaryText: { textAlign: 'center', marginTop: 10, fontSize: 14 },
     highlightText: { color: '#555' },
-    dotsContainer: { flexDirection: 'row', justifyContent: 'center', paddingBottom: 10 },
+    dotsContainer: { flexDirection: 'row', justifyContent: 'center', paddingVertical: 8, paddingHorizontal: 10 },
     dot: { width: 7, height: 7, borderRadius: 3.5, margin: 3 },
     activeDot: { backgroundColor: '#c0392b', width: 16 },
     inactiveDot: { backgroundColor: '#ccc' },
@@ -424,7 +425,10 @@ const styles = StyleSheet.create({
     chauLuotContainer: {
         // marginBottom: 5,
         backgroundColor: "#f0f7ff",
-        padding: 10,
+        padding: 5,
+        paddingHorizontal: 15,
+        paddingBottom:15,
+        textAlign: "justify",
         borderRadius: 24,        
         borderTopLeftRadius: 0,
         borderTopRightRadius: 0,
