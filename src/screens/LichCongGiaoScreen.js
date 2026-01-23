@@ -56,27 +56,18 @@ const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible }) => {
     return (
         // <View style={[styles.page, styles.container_x]}>
         <View style={[styles.page, styles.container_x]}>
-            {/* <View style={[styles.topBlock, { marginTop: insets.top + 15 }]}>
+            <View style={[styles.topBlock, { marginTop: insets.top + 15 }]}>
                 <Text style={styles.dayNameText}>{daysOfWeek[dateObj.getDay()].toUpperCase()}</Text>
                 <View style={styles.mainDateContainer}>
                     <Text style={styles.dayNumText}>{dateObj.getDate()}</Text>
                     <Text style={styles.monthYearText}>THÁNG {dateObj.getMonth() + 1} NĂM {dateObj.getFullYear()}</Text>
                 </View>
                 <View style={styles.topFooter}>
-                    <Text style={styles.lunarText}>Lịch âm: <Text style={styles.lunarDateHighlight}>{lunar.getDay()}/{lunar.getMonth()}</Text></Text>
+                    {/* <Text style={styles.lunarText}>Lịch âm: <Text style={styles.lunarDateHighlight}>{lunar.getDay()}/{lunar.getMonth()}</Text></Text> */}
+                    <Text style={styles.lunarDateHighlight}>{lunar.getDay()}/{lunar.getMonth()}/{lunarCan[lunar.getYear()%10]} {lunarChi[lunar.getYear()%12]} </Text>
                 </View>
-            </View> */}
-            <View style={[styles.dateBanner, { marginTop: insets.top + 15 }]}>                   
-                <Text style={styles.dayNumber}>{dateObj.getDate()}</Text>
-                <View style={styles.dateTextContainer}>
-                    <Text style={styles.weekDay}>{daysOfWeek[dateObj.getDay()].toUpperCase()}</Text>
-                    <Text style={styles.fullDate}>THÁNG {dateObj.getMonth() + 1} NĂM {dateObj.getFullYear()}</Text>
-                    {/* <Text style={styles.lunarText}>{lunar.getDay()}/{lunar.getMonth()}/{lunarCan[lunar.getYear()%10]} {lunarChi[lunar.getYear()%12]} </Text> */}
-                </View>                                                    
             </View>
-            {/* <View>
-                <Text style={styles.lunarText}>{lunar.getDay()}/{lunar.getMonth()}/{lunarCan[lunar.getYear()%10]} {lunarChi[lunar.getYear()%12]} </Text>
-            </View> */}
+        
             <View style={[styles.bottomBlock, { marginBottom: 60 }]}>
                 <PagerView style={styles.pagerLe} initialPage={0} onPageSelected={e => setActiveLeIndex(e.nativeEvent.position)}>
                     {listLe.map((le, idx) => {
