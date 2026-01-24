@@ -42,7 +42,25 @@ export default function NewsScreen() {
 
     useEffect(() => {
         fetchNews();
+        fetchFeaturedNews();
     }, []);
+
+    const fetchFeaturedNews = async () => {
+        try {
+            const response = await axios.get(API_URL + 'get-featured-news', {
+                timeout: 10000,
+                headers: {
+                    'Cache-Control': 'no-cache'
+                }
+            });
+            if (response.data && response.data.success) {
+                const data = response.data.data;
+                setFeaturedNews(data.posts || []);
+            }
+        } catch (error) {
+            console.log("Lỗi lấy danh sách tin tức nổi bật: ", error)
+        }
+    }
 
     const fetchNews = async (pageNum = 1, isLoadMore = false) => {
         try {
@@ -63,7 +81,7 @@ export default function NewsScreen() {
                 const posts = data.posts || [];
                 if (pageNum === 1) {
                     setNews(posts);
-                    setFeaturedNews(posts.slice(0, 3));
+                    // setFeaturedNews(posts.slice(0, 3));
                     setTotalPages(data.totalPages || 1);
                     setHasMore(pageNum < (data.totalPages || 1));
                 } else {
@@ -98,6 +116,7 @@ export default function NewsScreen() {
     const onRefresh = () => {
         setRefreshing(true);
         fetchNews(1, false);
+        fetchFeaturedNews();
     };
 
     const loadMore = () => {
@@ -213,12 +232,12 @@ export default function NewsScreen() {
 
     const handleNewsPress = async (item) => {
         try {
-            const supported = await Linking.canOpenURL(item.link);
-            if (supported) {
-                await Linking.openURL(item.link);
-            } else {
-                Alert.alert('Lỗi', 'Không thể mở liên kết này');
-            }
+            // const supported = await Linking.canOpenURL(item.link);
+            // if (supported) {
+            //     await Linking.openURL(item.link);
+            // } else {
+            //     Alert.alert('Lỗi', 'Không thể mở liên kết này');
+            // }
         } catch (error) {
             Alert.alert('Lỗi', 'Không thể mở bài viết');
         }
@@ -288,7 +307,7 @@ export default function NewsScreen() {
                                 <FlatList
                                     horizontal
                                     data={featuredNews}
-                                    keyExtractor={(item) => `featured-${item._id}`}
+                                    keyExtractor={(item) => `featured-${item.postId}`}
                                     renderItem={renderFeaturedItem}
                                     showsHorizontalScrollIndicator={false}
                                     contentContainerStyle={styles.featuredList}
