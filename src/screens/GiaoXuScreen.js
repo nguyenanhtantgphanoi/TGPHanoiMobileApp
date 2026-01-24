@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import axios from 'axios';
 import { FontAwesome5 } from '@expo/vector-icons';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 export default function GiaoXuScreen({ route, navigation }) {
     const [allGiaoXu, setAllGiaoXu] = useState([]);
@@ -77,12 +78,17 @@ export default function GiaoXuScreen({ route, navigation }) {
 
     return (
         <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-            <View style={{ flex: 1, paddingTop: 60, backgroundColor: '#fff' }}>
-                <Text style={styles.header}>
-                    {giaoHatFromParams
-                        ? `Giáo xứ thuộc giáo hạt: ${giaoHatFromParams}`
-                        : 'Danh sách Giáo xứ'}
-                </Text>
+            <View style={{ flex: 1, paddingTop: 60, backgroundColor: '#c2850bde' }}>
+                <View style={styles.headerContainer}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                        <MaterialIcons name="arrow-back" size={24} color="#000" />
+                    </TouchableOpacity>
+                    <Text style={styles.header}>
+                        {giaoHatFromParams
+                            ? `Giáo xứ thuộc giáo hạt: ${giaoHatFromParams}`
+                            : 'Danh sách Giáo xứ'}
+                    </Text>
+                </View>
 
                 {/* 🔍 Search input with clear button */}
                 <View style={styles.searchContainer}>
@@ -123,12 +129,21 @@ const styles = StyleSheet.create({
     center: {
         flex: 1, justifyContent: 'center', alignItems: 'center'
     },
+    headerContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        marginBottom: 10,
+    },
+    backButton: {
+        padding: 8,
+        marginRight: 10,
+    },
     header: {
         fontSize: 20,
         fontWeight: 'bold',
-        marginHorizontal: 16,
-        marginBottom: 10,
         color: '#222',
+        flex: 1,
     },
     searchContainer: {
         flexDirection: 'row',
@@ -156,7 +171,7 @@ const styles = StyleSheet.create({
     card: {
         marginHorizontal: 16,
         marginVertical: 6,
-        backgroundColor: '#f8f8f8',
+        backgroundColor: '#f8f8f8f1',
         padding: 12,
         borderRadius: 8,
         elevation: 1,

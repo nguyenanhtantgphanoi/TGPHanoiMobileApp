@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         paddingTop: 60,
-        backgroundColor: '#fff',
+        backgroundColor: '#c2850bde',
     },
     header: {
         fontSize: 28,
@@ -90,7 +90,8 @@ const styles = StyleSheet.create({
         marginRight: 16,
     },
     label: {
-        fontSize: 16,
+        fontSize: 18,
         color: '#333',
+        fontWeight: 'bold',
     },
 });

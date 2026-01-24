@@ -6,13 +6,15 @@ import {
     FlatList,
     ActivityIndicator,
     StyleSheet,
-    Image
+    Image,
+    TouchableOpacity
 } from 'react-native';
 import axios from 'axios';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Animatable from 'react-native-animatable';
 import { FontAwesome5 } from '@expo/vector-icons';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const Tab = createMaterialTopTabNavigator();
@@ -72,7 +74,7 @@ const LinhMucDongScreen = ({ data }) => {
     return <LinhMucList data={list} />;
 };
 
-export default function LMScreen() {
+export default function LMScreen({ navigation }) {
     const [data, setData] = useState([]);
     const [searchText, setSearchText] = useState('');
     const [filteredData, setFilteredData] = useState([]);
@@ -118,24 +120,29 @@ export default function LMScreen() {
     }
 
     return (
-        <View style={{ flex: 1, paddingTop: 60, backgroundColor: 'white' }}>
+        <View style={{ flex: 1, paddingTop: 60, backgroundColor: '#c2850bde' }}>
             {/* 🔍 Search with Clear Button */}
-            <View style={styles.searchContainer}>
-                <TextInput
-                    style={styles.searchInput}
-                    placeholder="🔍 Tìm kiếm tên linh mục..."
-                    value={searchText}
-                    onChangeText={setSearchText}
-                />
-                {searchText.length > 0 && (
-                    <FontAwesome5
-                        name="times-circle"
-                        size={18}
-                        color="#999"
-                        onPress={() => setSearchText('')}
-                        style={styles.clearButton}
+            <View style={styles.topContainer}>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                    <MaterialIcons name="arrow-back" size={24} color="#000" />
+                </TouchableOpacity>
+                <View style={styles.searchContainer}>
+                    <TextInput
+                        style={styles.searchInput}
+                        placeholder="🔍 Tìm kiếm tên linh mục..."
+                        value={searchText}
+                        onChangeText={setSearchText}
                     />
-                )}
+                    {searchText.length > 0 && (
+                        <FontAwesome5
+                            name="times-circle"
+                            size={18}
+                            color="#999"
+                            onPress={() => setSearchText('')}
+                            style={styles.clearButton}
+                        />
+                    )}
+                </View>
             </View>
 
             <Tab.Navigator
@@ -161,11 +168,20 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
-    searchContainer: {
+    topContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginHorizontal: 12,
+        paddingHorizontal: 12,
         marginBottom: 8,
+        gap: 8,
+    },
+    backButton: {
+        padding: 8,
+    },
+    searchContainer: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
         backgroundColor: '#f0f0f0',
         borderRadius: 10,
         paddingHorizontal: 12,

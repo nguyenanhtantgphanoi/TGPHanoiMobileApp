@@ -11,6 +11,7 @@ import RenderHTML from "react-native-render-html";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useIsFocused } from "@react-navigation/native"; // Cần thiết để đồng bộ
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 /* ================= CONSTANT (DÙNG CHUNG) ================= */
 const FONT_SCALE_KEY = "@kinh_font_scale";
@@ -24,7 +25,7 @@ const extractBodyHTML = (html) => {
 };
 
 /* ================= SCREEN ================= */
-export default function ChiTietKinhScreen({ route }) {
+export default function ChiTietKinhScreen({ route, navigation }) {
     const { html } = route.params;
     const { width } = useWindowDimensions();
     const isFocused = useIsFocused(); // Theo dõi trạng thái màn hình
@@ -85,12 +86,12 @@ export default function ChiTietKinhScreen({ route }) {
     /* ========== HTML STYLES ========== */
     const tagsStyles = useMemo(
         () => ({
-            body: { color: colors.text },
+            body: { color: colors.text, fontWeight: "bold" },
             h1: { fontSize: 22 * fontScale, fontWeight: "bold", textAlign: "center", marginBottom: 16, color: colors.title },
             h2: { fontSize: 18 * fontScale, fontWeight: "bold", textAlign: "center", marginVertical: 10, color: colors.title },
             h3: { fontSize: 17 * fontScale, fontWeight: "bold", marginVertical: 8, color: colors.title },
             h4: { fontSize: 16 * fontScale, fontWeight: "bold", marginVertical: 6, color: colors.title },
-            p: { fontSize: 18 * fontScale, lineHeight: 30 * fontScale, marginBottom: 10, color: colors.text },
+            p: { fontSize: 18 * fontScale, lineHeight: 30 * fontScale, marginBottom: 10, color: colors.text, textAlign: 'justify' },
             em: { fontStyle: "italic", color: colors.text },
             strong: { fontWeight: "bold", color: colors.text },
             hr: { borderColor: colors.title, borderBottomWidth: 5, margin: 30 },
@@ -107,7 +108,8 @@ export default function ChiTietKinhScreen({ route }) {
             red: {color: '#ff0000'},
             italic: {fontStyle:"italic"},
             exception: {backgroundColor: '#e0e0e0d8', padding: 10},
-            bold: {fontWeight: 'bold'}
+            bold: {fontWeight: 'bold'},
+            justify:{textAlign: 'justify'}
         }),
         [fontScale, colors]
     );
@@ -136,6 +138,10 @@ export default function ChiTietKinhScreen({ route }) {
                 }}
             >
                 <View style={{ flexDirection: "row", alignItems: "center" }}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginRight: 12 }}>
+                        <MaterialIcons name="arrow-back" size={24} color={colors.text} />
+                    </TouchableOpacity>
+
                     <TouchableOpacity onPress={() => updateFontScale(fontScale - 0.1)}>
                         <Text style={{ fontSize: 18, color: colors.text }}>A−</Text>
                     </TouchableOpacity>
