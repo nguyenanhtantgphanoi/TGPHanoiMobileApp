@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
     View,
     StyleSheet,
@@ -11,7 +11,6 @@ import {
     Dimensions,
     StatusBar,
     Animated,
-    Linking,
     Alert
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -24,7 +23,55 @@ const FEATURED_HEIGHT = 220;
 const NORMAL_IMAGE_HEIGHT = 200;
 const API_URL = 'https://news-tgphn.lamgs.io.vn/news/';
 
-export default function NewsScreen() {
+// --- TÁCH COMPONENT TIN NỔI BẬT ĐỂ TỐI ƯU ---
+const FeaturedSection = React.memo(({ data, renderItem }) => {
+    const [activeIndex, setActiveIndex] = useState(0);
+
+    if (!data || data.length === 0) return null;
+
+    // Tính toán index ngay khi đang scroll (không delay)
+    const handleScroll = (event) => {
+        const scrollOffset = event.nativeEvent.contentOffset.x;
+        const index = Math.round(scrollOffset / (CARD_WIDTH + 16));
+        if (index !== activeIndex && index >= 0 && index < data.length) {
+            setActiveIndex(index);
+        }
+    };
+
+    return (
+        <View style={styles.featuredSection}>
+            <Text style={styles.sectionTitle}>Tin nổi bật</Text>
+            <FlatList
+                horizontal
+                data={data}
+                keyExtractor={(item) => `featured-${item.postId || item._id}`}
+                renderItem={renderItem}
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.featuredList}
+                pagingEnabled
+                snapToInterval={CARD_WIDTH + 16}
+                decelerationRate="fast"
+                removeClippedSubviews={true}
+                onScroll={handleScroll} // Chuyển sang dùng onScroll
+                scrollEventThrottle={16} // Tần suất bắt sự kiện cao nhất để dot chạy theo tay
+            />
+            {/* Dots indicator */}
+            <View style={styles.paginationDots}>
+                {data.map((_, index) => (
+                    <View
+                        key={index}
+                        style={[
+                            styles.dot,
+                            activeIndex === index ? styles.activeDot : styles.inactiveDot
+                        ]}
+                    />
+                ))}
+            </View>
+        </View>
+    );
+}, (prev, next) => prev.data === next.data);
+
+export default function NewsScreen({ navigation }) {
     const [news, setNews] = useState([]);
     const [featuredNews, setFeaturedNews] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -49,79 +96,49 @@ export default function NewsScreen() {
         try {
             const response = await axios.get(API_URL + 'get-featured-news', {
                 timeout: 10000,
-                headers: {
-                    'Cache-Control': 'no-cache'
-                }
+                headers: { 'Cache-Control': 'no-cache' }
             });
             if (response.data && response.data.success) {
-                const data = response.data.data;
-                setFeaturedNews(data.posts || []);
+                setFeaturedNews(response.data.data.posts || []);
             }
         } catch (error) {
             console.log("Lỗi lấy danh sách tin tức nổi bật: ", error)
         }
-    }
+    };
 
     const fetchNews = async (pageNum = 1, isLoadMore = false) => {
         try {
-            if (pageNum === 1 && !isLoadMore) {
-                setLoading(true);
-            } else {
-                setLoadingMore(true);
-            }
+            if (pageNum === 1 && !isLoadMore) setLoading(true);
+            else setLoadingMore(true);
+
             setError(null);
             const response = await axios.get(API_URL, {
                 timeout: 10000,
-                headers: {
-                    'Cache-Control': 'no-cache'
-                }
+                headers: { 'Cache-Control': 'no-cache' }
             });
+
             if (response.data && response.data.success) {
                 const data = response.data.data;
                 const posts = data.posts || [];
                 if (pageNum === 1) {
                     setNews(posts);
-                    // setFeaturedNews(posts.slice(0, 3));
                     setTotalPages(data.totalPages || 1);
-                    setHasMore(pageNum < (data.totalPages || 1));
                 } else {
                     const newPosts = posts.filter(newPost =>
                         !news.some(existingPost => existingPost._id === newPost._id)
                     );
-                    if (newPosts.length > 0) {
-                        setNews(prev => [...prev, ...newPosts]);
-                    }
+                    if (newPosts.length > 0) setNews(prev => [...prev, ...newPosts]);
                 }
                 setPage(pageNum);
                 setHasMore(pageNum < (data.totalPages || 1));
-            } else {
-                throw new Error('API response không hợp lệ');
             }
         } catch (error) {
             setError(error.message);
-            if (!isLoadMore) {
-                Alert.alert(
-                    'Lỗi',
-                    'Không thể tải tin tức. Vui lòng thử lại sau.',
-                    [{ text: 'OK' }]
-                );
-            }
+            if (!isLoadMore) Alert.alert('Lỗi', 'Không thể tải tin tức.');
         } finally {
             setLoading(false);
             setLoadingMore(false);
             setRefreshing(false);
-        }
-    };
-
-    const onRefresh = () => {
-        setRefreshing(true);
-        fetchNews(1, false);
-        fetchFeaturedNews();
-    };
-
-    const loadMore = () => {
-        if (!loadingMore && hasMore && totalPages > 1) {
-            fetchNews(page + 1, true);
         }
     };
 
@@ -133,21 +150,17 @@ export default function NewsScreen() {
             const diffMs = now - date;
             const diffMinutes = Math.floor(diffMs / (1000 * 60));
             const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-            const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
             if (diffMinutes < 60) return `${diffMinutes} phút trước`;
             if (diffHours < 24) return `${diffHours} giờ trước`;
-            if (diffDays < 7) return `${diffDays} ngày trước`;
-            return date.toLocaleDateString('vi-VN', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric'
-            });
-        } catch {
-            return 'Vừa xong';
-        }
+            return date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        } catch { return 'Vừa xong'; }
     };
 
-    const renderFeaturedItem = ({ item, index }) => (
+    const handleNewsPress = useCallback((item) => {
+        if (item.link) navigation.navigate('GXDetailScreen', { link: item.link });
+    }, [navigation]);
+
+    const renderFeaturedItem = useCallback(({ item, index }) => (
         <TouchableOpacity
             style={styles.featuredCard}
             activeOpacity={0.9}
@@ -163,119 +176,86 @@ export default function NewsScreen() {
             />
             <View style={styles.featuredOverlay}>
                 <View style={styles.featuredContent}>
-                    <Text style={styles.featuredTitle} numberOfLines={2}>
-                        {item.title}
-                    </Text>
-                    <Text style={styles.featuredExcerpt} numberOfLines={2}>
-                        {item.excerpt}
-                    </Text>
+                    <Text style={styles.featuredTitle} numberOfLines={2}>{item.title}</Text>
+                    <Text style={styles.featuredExcerpt} numberOfLines={2}>{item.excerpt}</Text>
                     <View style={styles.featuredMeta}>
                         <Ionicons name="time-outline" size={12} color="#fff" />
-                        <Text style={styles.featuredTime}>
-                            {formatDate(item.lastPublishedAt || item.parsedDate)}
-                        </Text>
+                        <Text style={styles.featuredTime}>{formatDate(item.lastPublishedAt || item.parsedDate)}</Text>
                     </View>
                 </View>
             </View>
-            <View style={styles.featuredIndex}>
-                <Text style={styles.featuredIndexText}>{index + 1}</Text>
-            </View>
         </TouchableOpacity>
-    );
+    ), [handleNewsPress]);
 
-    const renderNewsItem = ({ item, index }) => (
+    const renderNewsItem = useCallback(({ item, index }) => (
         <TouchableOpacity
             style={styles.newsCard}
             activeOpacity={0.9}
             onPress={() => handleNewsPress(item)}
         >
-            <Text style={styles.newsTitle} numberOfLines={3}>
-                {item.title}
-            </Text>
-
+            <Text style={styles.newsTitle} numberOfLines={3}>{item.title}</Text>
             <View style={styles.imageContainer}>
-                <View style={{ backgroundColor: '#d59d2c', alignSelf: 'flex-start', justifyContent: 'center', alignItems: 'center', padding: 8, borderRadius: 8, marginBottom: 8, position: 'absolute', top: 10, left: 10, zIndex: 2 }}>
-                    <Text style={{ color: 'white', fontWeight: '600' }} numberOfLines={1}>
-                        {item.category || 'Đang cập nhật...'}
-                    </Text>
+                <View style={styles.categoryBadge}>
+                    <Text style={styles.categoryText}>{item.category || 'Tin tức'}</Text>
                 </View>
                 <Image
                     source={{
-                        uri: item.image || `https://via.placeholder.com/800x400/1e90ff/ffffff?text=${encodeURIComponent(item.title.substring(0, 20))}`,
+                        uri: item.image || `https://via.placeholder.com/800x400/1e90ff/ffffff`,
                         cache: 'force-cache'
                     }}
                     style={styles.newsImage}
                     resizeMode="cover"
                 />
-                <View style={styles.imageGradient} />
             </View>
-            <Text style={styles.newsExcerpt} numberOfLines={3}>
-                {item.excerpt || 'Đang cập nhật...'}
-            </Text>
+            <Text style={styles.newsExcerpt} numberOfLines={3}>{item.excerpt || 'Đang cập nhật...'}</Text>
             <View style={styles.newsMeta}>
                 <View style={styles.metaLeft}>
                     <Ionicons name="time-outline" size={14} color="#666" />
-                    <Text style={styles.newsTime}>
-                        {formatDate(item.lastPublishedAt || item.parsedDate)}
-                    </Text>
+                    <Text style={styles.newsTime}>{formatDate(item.lastPublishedAt || item.parsedDate)}</Text>
                 </View>
-                <TouchableOpacity
-                    style={styles.readMoreButton}
-                    onPress={() => handleNewsPress(item)}
-                >
+                <View style={styles.readMoreButton}>
                     <Text style={styles.readMoreText}>Đọc tiếp →</Text>
-                </TouchableOpacity>
+                </View>
             </View>
             {index < news.length - 1 && <View style={styles.divider} />}
         </TouchableOpacity>
-    );
+    ), [news.length, handleNewsPress]);
 
-    const handleNewsPress = async (item) => {
-        try {
-            // const supported = await Linking.canOpenURL(item.link);
-            // if (supported) {
-            //     await Linking.openURL(item.link);
-            // } else {
-            //     Alert.alert('Lỗi', 'Không thể mở liên kết này');
-            // }
-        } catch (error) {
-            Alert.alert('Lỗi', 'Không thể mở bài viết');
-        }
-    };
+    const listHeader = useMemo(() => (
+        <View>
+            <FeaturedSection
+                data={featuredNews}
+                renderItem={renderFeaturedItem}
+            />
+            <View style={styles.newsSectionHeader}>
+                <Text style={styles.newsSectionTitle}>Tin mới nhất</Text>
+            </View>
+        </View>
+    ), [featuredNews, renderFeaturedItem]);
 
     const handleScrollToTop = () => {
         flatListRef.current?.scrollToOffset({ animated: true, offset: 0 });
     };
 
     const renderFooter = () => {
-        if (loadingMore) {
-            return (
-                <View style={styles.loadingMoreContainer}>
-                    <ActivityIndicator size="small" color="#1e90ff" />
-                    <Text style={styles.loadingMoreText}>Đang tải thêm...</Text>
-                </View>
-            );
-        }
-        if (!hasMore && news.length > 0) {
-            return (
-                <View style={styles.endOfList}>
-                    <Text style={styles.endOfListText}>
-                        {totalPages <= 1 ? `Đã hiển thị tất cả ${news.length} tin tức` : 'Đã xem hết tin'}
-                    </Text>
-                </View>
-            );
-        }
+        if (loadingMore) return (
+            <View style={styles.loadingMoreContainer}>
+                <ActivityIndicator size="small" color="#1e90ff" />
+            </View>
+        );
         return null;
+    };
+
+    const loadMore = () => {
+        if (!loadingMore && hasMore && totalPages > 1) {
+            fetchNews(page + 1, true);
+        }
     };
 
     if (loading && page === 1) {
         return (
-            <View style={[styles.container, { paddingTop: insets.top }]}>
-                <StatusBar barStyle="dark-content" />
-                <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color="#1e90ff" />
-                    <Text style={styles.loadingText}>Đang tải tin tức...</Text>
-                </View>
+            <View style={[styles.container, { paddingTop: insets.top, justifyContent: 'center', alignItems: 'center' }]}>
+                <ActivityIndicator size="large" color="#1e90ff" />
             </View>
         );
     }
@@ -284,13 +264,12 @@ export default function NewsScreen() {
         <View style={[styles.container, { paddingTop: insets.top }]}>
             <StatusBar barStyle="dark-content" backgroundColor="#fff" />
             <View style={styles.fixedHeader}>
-                {/* <Text style={styles.headerTitle}>Tin Tức TGP Hà Nội</Text> */}
-                <Image source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/59/Logo_T%E1%BB%95ng_Gi%C3%A1o_ph%E1%BA%ADn_H%C3%A0_N%E1%BB%99i.svg/960px-Logo_T%E1%BB%95ng_Gi%C3%A1o_ph%E1%BA%ADn_H%C3%A0_N%E1%BB%99i.svg.png', width: 50, height: 50 }} />
-                <TouchableOpacity
-                    style={styles.searchButton}
-                    onPress={() => Alert.alert('Thông báo', 'Tính năng tìm kiếm đang phát triển')}
-                >
-                    <Ionicons name="search-outline" size={22} color="#333" />
+                <Image
+                    source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/59/Logo_T%E1%BB%95ng_Gi%C3%A1o_ph%E1%BA%ADn_H%C3%A0_N%E1%BB%99i.svg/960px-Logo_T%E1%BB%95ng_Gi%C3%A1o_ph%E1%BA%ADn_H%C3%A0_N%E1%BB%99i.svg.png' }}
+                    style={{ width: 40, height: 40 }}
+                />
+                <TouchableOpacity onPress={() => Alert.alert('Thông báo', 'Tính năng đang phát triển')}>
+                    <Ionicons name="search-outline" size={24} color="#333" />
                 </TouchableOpacity>
             </View>
 
@@ -299,36 +278,9 @@ export default function NewsScreen() {
                 data={news}
                 keyExtractor={(item) => `news-${item._id}`}
                 renderItem={renderNewsItem}
-                ListHeaderComponent={() => (
-                    <View>
-                        {featuredNews.length > 0 && (
-                            <View style={styles.featuredSection}>
-                                <Text style={styles.sectionTitle}>Tin nổi bật</Text>
-                                <FlatList
-                                    horizontal
-                                    data={featuredNews}
-                                    keyExtractor={(item) => `featured-${item.postId}`}
-                                    renderItem={renderFeaturedItem}
-                                    showsHorizontalScrollIndicator={false}
-                                    contentContainerStyle={styles.featuredList}
-                                    pagingEnabled
-                                    snapToInterval={CARD_WIDTH + 16}
-                                    decelerationRate="fast"
-                                />
-                            </View>
-                        )}
-                        <View style={styles.newsSectionHeader}>
-                            <Text style={styles.newsSectionTitle}>Tin mới nhất</Text>
-                        </View>
-                    </View>
-                )}
+                ListHeaderComponent={listHeader}
                 refreshControl={
-                    <RefreshControl
-                        refreshing={refreshing}
-                        onRefresh={onRefresh}
-                        colors={['#1e90ff']}
-                        tintColor="#1e90ff"
-                    />
+                    <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchNews(1); fetchFeaturedNews(); }} />
                 }
                 onScroll={Animated.event(
                     [{ nativeEvent: { contentOffset: { y: scrollY } } }],
@@ -336,44 +288,22 @@ export default function NewsScreen() {
                         useNativeDriver: false,
                         listener: (event) => {
                             const offsetY = event.nativeEvent.contentOffset.y;
-                            if (offsetY > 400 && !showScrollTop) {
-                                setShowScrollTop(true);
-                            } else if (offsetY <= 400 && showScrollTop) {
-                                setShowScrollTop(false);
-                            }
+                            if (offsetY > 400 && !showScrollTop) setShowScrollTop(true);
+                            else if (offsetY <= 400 && showScrollTop) setShowScrollTop(false);
                         }
                     }
                 )}
-                onEndReached={loadMore}
+                onEndReached={() => hasMore && loadMore()}
                 onEndReachedThreshold={0.5}
-                scrollEventThrottle={16}
-                showsVerticalScrollIndicator={false}
                 ListFooterComponent={renderFooter}
-                ListEmptyComponent={() => (
-                    !loading && (
-                        <View style={styles.emptyContainer}>
-                            <Ionicons name="newspaper-outline" size={64} color="#ccc" />
-                            <Text style={styles.emptyText}>Không có tin tức nào</Text>
-                            <TouchableOpacity
-                                style={styles.retryButton}
-                                onPress={() => fetchNews(1, false)}
-                            >
-                                <Text style={styles.retryButtonText}>Thử lại</Text>
-                            </TouchableOpacity>
-                        </View>
-                    )
-                )}
                 removeClippedSubviews={true}
+                initialNumToRender={10}
                 maxToRenderPerBatch={10}
                 windowSize={5}
             />
 
             {showScrollTop && (
-                <TouchableOpacity
-                    style={[styles.scrollTopButton, { bottom: 20 }]}
-                    onPress={handleScrollToTop}
-                    activeOpacity={0.8}
-                >
+                <TouchableOpacity style={styles.scrollTopButton} onPress={handleScrollToTop}>
                     <Ionicons name="arrow-up" size={24} color="#fff" />
                 </TouchableOpacity>
             )}
@@ -382,250 +312,61 @@ export default function NewsScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#fff',
-    },
+    container: { flex: 1, backgroundColor: '#fff' },
     fixedHeader: {
+        height: 60,
         backgroundColor: '#fff',
         paddingHorizontal: 16,
-        paddingVertical: 16,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
         borderBottomWidth: 1,
-        borderBottomColor: '#e0e0e0',
+        borderBottomColor: '#f0f0f0',
+    },
+    featuredSection: { paddingVertical: 15, backgroundColor: '#f8f9fa' },
+    sectionTitle: { fontSize: 20, fontWeight: '700', marginLeft: 16, marginBottom: 10 },
+    featuredList: { paddingHorizontal: 16 },
+    featuredCard: { width: CARD_WIDTH, height: FEATURED_HEIGHT, marginRight: 16, borderRadius: 12, overflow: 'hidden' },
+    featuredImage: { ...StyleSheet.absoluteFillObject },
+    featuredOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'flex-end', padding: 15 },
+    featuredTitle: { color: '#fff', fontSize: 18, fontWeight: '700' },
+    featuredExcerpt: { color: '#eee', fontSize: 13, marginTop: 5 },
+    featuredMeta: { flexDirection: 'row', alignItems: 'center', marginTop: 8 },
+    featuredTime: { color: '#fff', fontSize: 11, marginLeft: 4 },
+    paginationDots: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    headerTitle: {
-        fontSize: 24,
-        fontWeight: '700',
-        color: '#1e90ff',
-    },
-    searchButton: {
-        padding: 8,
-    },
-    featuredSection: {
-        backgroundColor: '#f8f9fa',
-        paddingVertical: 20,
-        marginBottom: 20,
-    },
-    sectionTitle: {
-        fontSize: 22,
-        fontWeight: '700',
-        color: '#333',
-        paddingHorizontal: 16,
-        marginBottom: 12,
-    },
-    featuredList: {
-        paddingHorizontal: 16,
-    },
-    featuredCard: {
-        width: CARD_WIDTH,
-        height: FEATURED_HEIGHT,
-        marginRight: 16,
-        borderRadius: 12,
-        overflow: 'hidden',
-        position: 'relative',
-    },
-    featuredImage: {
-        width: '100%',
-        height: '100%',
-        position: 'absolute',
-    },
-    featuredOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.4)',
-    },
-    featuredContent: {
-        flex: 1,
-        padding: 16,
-        justifyContent: 'flex-end',
-    },
-    featuredTitle: {
-        color: '#fff',
-        fontSize: 18,
-        fontWeight: '700',
-        lineHeight: 24,
-        marginBottom: 8,
-    },
-    featuredExcerpt: {
-        color: 'rgba(255, 255, 255, 0.9)',
-        fontSize: 14,
-        lineHeight: 20,
-        marginBottom: 12,
-    },
-    featuredMeta: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    featuredTime: {
-        color: 'rgba(255, 255, 255, 0.9)',
-        fontSize: 12,
-        marginLeft: 4,
-    },
-    featuredIndex: {
-        position: 'absolute',
-        top: 12,
-        right: 12,
-        backgroundColor: 'rgba(0, 0, 0, 0.6)',
-        width: 30,
-        height: 30,
-        borderRadius: 15,
         justifyContent: 'center',
         alignItems: 'center',
+        marginTop: 10,
     },
-    featuredIndexText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: '700',
+    dot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        marginHorizontal: 4,
     },
-    newsSectionHeader: {
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        marginBottom: 10,
-    },
-    newsSectionTitle: {
-        fontSize: 22,
-        fontWeight: '700',
-        color: '#333',
-        marginBottom: 4,
-    },
-    newsCount: {
-        fontSize: 14,
-        color: '#666',
-    },
-    newsCard: {
-        paddingHorizontal: 16,
-        paddingVertical: 20,
-        backgroundColor: '#fff',
-    },
-    newsTitle: {
-        fontSize: 20,
-        fontWeight: '700',
-        color: '#333',
-        lineHeight: 28,
-        marginBottom: 16,
-    },
-    imageContainer: {
-        position: 'relative',
-        marginBottom: 16,
-    },
-    newsImage: {
-        width: '100%',
-        height: NORMAL_IMAGE_HEIGHT,
-        borderRadius: 12,
-    },
-    imageGradient: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        height: 40,
-        borderBottomLeftRadius: 12,
-        borderBottomRightRadius: 12,
-    },
-    newsExcerpt: {
-        fontSize: 16,
-        color: '#555',
-        lineHeight: 24,
-        marginBottom: 16,
-    },
-    newsMeta: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    metaLeft: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    newsTime: {
-        fontSize: 14,
-        color: '#666',
-        marginLeft: 6,
-    },
-    readMoreButton: {
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        backgroundColor: '#f0f7ff',
-        borderRadius: 6,
-    },
-    readMoreText: {
-        fontSize: 14,
-        color: '#1e90ff',
-        fontWeight: '600',
-    },
-    divider: {
-        height: 1,
-        backgroundColor: '#f0f0f0',
-        marginTop: 20,
-    },
-    scrollTopButton: {
-        position: 'absolute',
-        right: 20,
+    activeDot: {
         backgroundColor: '#1e90ff',
-        width: 50,
-        height: 50,
-        borderRadius: 25,
-        justifyContent: 'center',
-        alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.3,
-        shadowRadius: 4,
-        elevation: 5,
+        width: 20,
     },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
+    inactiveDot: {
+        backgroundColor: '#ccc',
     },
-    loadingText: {
-        marginTop: 12,
-        fontSize: 16,
-        color: '#666',
-    },
-    loadingMoreContainer: {
-        paddingVertical: 20,
-        alignItems: 'center',
-    },
-    loadingMoreText: {
-        marginTop: 8,
-        fontSize: 14,
-        color: '#666',
-    },
-    endOfList: {
-        paddingVertical: 30,
-        alignItems: 'center',
-        backgroundColor: '#f8f9fa',
-        marginHorizontal: 16,
-        borderRadius: 12,
-        marginVertical: 20,
-    },
-    endOfListText: {
-        fontSize: 14,
-        color: '#666',
-        fontWeight: '500',
-    },
-    emptyContainer: {
-        alignItems: 'center',
-        paddingVertical: 60,
-    },
-    emptyText: {
-        marginTop: 16,
-        fontSize: 16,
-        color: '#999',
-    },
-    retryButton: {
-        marginTop: 20,
-        paddingHorizontal: 30,
-        paddingVertical: 12,
-        backgroundColor: '#1e90ff',
-        borderRadius: 8,
-    },
-    retryButtonText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: '600',
-    },
+    newsSectionHeader: { padding: 16 },
+    newsSectionTitle: { fontSize: 20, fontWeight: '700' },
+    newsCard: { padding: 16 },
+    newsTitle: { fontSize: 18, fontWeight: '700', color: '#333', marginBottom: 12 },
+    imageContainer: { position: 'relative' },
+    newsImage: { width: '100%', height: NORMAL_IMAGE_HEIGHT, borderRadius: 10 },
+    categoryBadge: { position: 'absolute', top: 10, left: 10, zIndex: 2, backgroundColor: '#d59d2c', padding: 6, borderRadius: 6 },
+    categoryText: { color: '#fff', fontSize: 12, fontWeight: '600' },
+    newsExcerpt: { fontSize: 15, color: '#666', marginTop: 12, lineHeight: 22 },
+    newsMeta: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 },
+    metaLeft: { flexDirection: 'row', alignItems: 'center' },
+    newsTime: { fontSize: 13, color: '#888', marginLeft: 5 },
+    readMoreButton: { backgroundColor: '#f0f7ff', padding: 8, borderRadius: 6 },
+    readMoreText: { color: '#1e90ff', fontWeight: '600', fontSize: 13 },
+    divider: { height: 1, backgroundColor: '#f0f0f0', marginTop: 20 },
+    scrollTopButton: { position: 'absolute', bottom: 30, right: 20, backgroundColor: '#1e90ff', width: 45, height: 45, borderRadius: 22.5, justifyContent: 'center', alignItems: 'center', elevation: 5 },
+    loadingMoreContainer: { padding: 20, alignItems: 'center' }
 });
