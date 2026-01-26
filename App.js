@@ -14,6 +14,8 @@ import KinhCacThanhTuDaoScreen from './src/screens/KinhCacThanhTuDaoScreen';
 import ChiTietKinhScreen from './src/screens/ChiTietKinhScreen';
 import GXDetailScreen from './src/screens/GXDetailScreen';
 import VanKienCongNghiScreen from './src/screens/VanKienCongNghiScreen';
+import LichLeNoiThanhScreen from './src/screens/LichLeNoiThanhScreen';
+import VPCacUyBanScreen from './src/screens/VPCacUyBanScreen';
 import { registerForPushNotifications } from './src/utils/pushToken';
 import { useEffect } from 'react';
 
@@ -43,6 +45,8 @@ function MainApp() {
         <Stack.Screen name="GiaoXuScreen" component={GiaoXuScreen} />
         <Stack.Screen name="GiaoHatScreen" component={GiaoHatScreen} />
         <Stack.Screen name="GXDetailScreen" component={GXDetailScreen} />
+        <Stack.Screen name="LichLeNoiThanhScreen" component={LichLeNoiThanhScreen} />
+        <Stack.Screen name="VPCacUyBanScreen" component={VPCacUyBanScreen} />
         <Stack.Screen
           name="KinhCacThanhTuDao"
           component={KinhCacThanhTuDaoScreen}
