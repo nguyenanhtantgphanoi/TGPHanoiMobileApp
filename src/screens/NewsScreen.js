@@ -157,7 +157,7 @@ export default function NewsScreen({ navigation }) {
     };
 
     const handleNewsPress = useCallback((item) => {
-        if (item.link) navigation.navigate('GXDetailScreen', { link: item.link });
+        if (item.link) navigation.navigate('NewsDetailScreen', { link: item.link });
     }, [navigation]);
 
     const renderFeaturedItem = useCallback(({ item, index }) => (

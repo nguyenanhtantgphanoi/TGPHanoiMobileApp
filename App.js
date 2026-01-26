@@ -16,6 +16,7 @@ import GXDetailScreen from './src/screens/GXDetailScreen';
 import VanKienCongNghiScreen from './src/screens/VanKienCongNghiScreen';
 import { registerForPushNotifications } from './src/utils/pushToken';
 import { useEffect } from 'react';
+import NewsDetailScreen from './src/screens/NewsDetailScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -43,6 +44,7 @@ function MainApp() {
         <Stack.Screen name="GiaoXuScreen" component={GiaoXuScreen} />
         <Stack.Screen name="GiaoHatScreen" component={GiaoHatScreen} />
         <Stack.Screen name="GXDetailScreen" component={GXDetailScreen} />
+        <Stack.Screen name="NewsDetailScreen" component={NewsDetailScreen} />
         <Stack.Screen
           name="KinhCacThanhTuDao"
           component={KinhCacThanhTuDaoScreen}
