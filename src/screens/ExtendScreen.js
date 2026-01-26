@@ -34,6 +34,16 @@ const menuItems = [
         label: 'Danh sách giáo hạt',
         screen: 'GiaoHatScreen'
     },
+    {
+        icon: 'calendar',
+        label: 'Lịch lễ nội thành Hà Nội',
+        screen: 'LichLeNoiThanhScreen'
+    },
+    {
+        icon: 'users',
+        label: 'VP các Ủy Ban',
+        screen: 'VPCacUyBanScreen'
+    },
     // {
     //     icon: 'cog',
     //     label: 'Cài đặt',

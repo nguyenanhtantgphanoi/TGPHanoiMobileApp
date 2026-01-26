@@ -86,12 +86,13 @@ export default function ChiTietKinhScreen({ route, navigation }) {
     /* ========== HTML STYLES ========== */
     const tagsStyles = useMemo(
         () => ({
-            body: { color: colors.text, fontWeight: "bold" },
+            body: { color: colors.text },
             h1: { fontSize: 22 * fontScale, fontWeight: "bold", textAlign: "center", marginBottom: 16, color: colors.title },
             h2: { fontSize: 18 * fontScale, fontWeight: "bold", textAlign: "center", marginVertical: 10, color: colors.title },
             h3: { fontSize: 17 * fontScale, fontWeight: "bold", marginVertical: 8, color: colors.title },
             h4: { fontSize: 16 * fontScale, fontWeight: "bold", marginVertical: 6, color: colors.title },
             p: { fontSize: 18 * fontScale, lineHeight: 30 * fontScale, marginBottom: 10, color: colors.text, textAlign: 'justify' },
+            li: { fontSize: 16 * fontScale, lineHeight: 30 * fontScale, marginBottom: 10, color: colors.text, textAlign: 'justify' },
             em: { fontStyle: "italic", color: colors.text },
             strong: { fontWeight: "bold", color: colors.text },
             hr: { borderColor: colors.title, borderBottomWidth: 5, margin: 30 },

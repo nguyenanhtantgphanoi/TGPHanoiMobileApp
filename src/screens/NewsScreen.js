@@ -264,12 +264,14 @@ export default function NewsScreen({ navigation }) {
         <View style={[styles.container, { paddingTop: insets.top }]}>
             <StatusBar barStyle="dark-content" backgroundColor="#fff" />
             <View style={styles.fixedHeader}>
-                <Image
-                    source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/59/Logo_T%E1%BB%95ng_Gi%C3%A1o_ph%E1%BA%ADn_H%C3%A0_N%E1%BB%99i.svg/960px-Logo_T%E1%BB%95ng_Gi%C3%A1o_ph%E1%BA%ADn_H%C3%A0_N%E1%BB%99i.svg.png' }}
-                    style={{ width: 40, height: 40 }}
-                />
-                <TouchableOpacity onPress={() => Alert.alert('Thông báo', 'Tính năng đang phát triển')}>
-                    <Ionicons name="search-outline" size={24} color="#333" />
+                {/* <Text style={styles.headerTitle}>Tin Tức TGP Hà Nội</Text> */}
+                <Image source={require('../../assets/icon-tgp.png')} style={{ width: 50, height: 50 }} />
+                    
+                <TouchableOpacity
+                    style={styles.searchButton}
+                    onPress={() => Alert.alert('Thông báo', 'Tính năng tìm kiếm đang phát triển')}
+                >
+                    <Ionicons name="search-outline" size={22} color="#333" />
                 </TouchableOpacity>
             </View>
 
