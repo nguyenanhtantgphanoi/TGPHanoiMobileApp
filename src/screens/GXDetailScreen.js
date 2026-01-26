@@ -10,12 +10,12 @@ export default function GXDetailScreen({ route, navigation }) {
     return (
         <View style={styles.container}>
             <WebViewDetail linkWeb={link} />
-            <TouchableOpacity 
+            {/* <TouchableOpacity 
                 onPress={() => navigation.goBack()} 
                 style={[styles.backButton, { top: insets.top, left: 10 }]}
             >
                 <MaterialIcons name="arrow-back" size={28} color="#000" />
-            </TouchableOpacity>
+            </TouchableOpacity> */}
         </View>
     )
 }
