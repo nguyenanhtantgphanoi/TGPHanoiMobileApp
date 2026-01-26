@@ -267,7 +267,7 @@ export default function NewsScreen() {
             <View style={styles.fixedHeader}>
                 {/* <Text style={styles.headerTitle}>Tin Tức TGP Hà Nội</Text> */}
                 <Image source={require('../../assets/icon-tgp.png')} style={{ width: 50, height: 50 }} />
-                
+                    
                 <TouchableOpacity
                     style={styles.searchButton}
                     onPress={() => Alert.alert('Thông báo', 'Tính năng tìm kiếm đang phát triển')}
