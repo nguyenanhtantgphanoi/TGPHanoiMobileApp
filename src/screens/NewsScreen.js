@@ -157,7 +157,7 @@ export default function NewsScreen({ navigation }) {
     };
 
     const handleNewsPress = useCallback((item) => {
-        if (item.link) navigation.navigate('NewsDetailScreen', { link: item.link });
+        if (item.link) navigation.navigate('NewsDetailScreen', { link: item.link, postId: item.postId || item._id });
     }, [navigation]);
 
     const renderFeaturedItem = useCallback(({ item, index }) => (
@@ -266,7 +266,7 @@ export default function NewsScreen({ navigation }) {
             <View style={styles.fixedHeader}>
                 {/* <Text style={styles.headerTitle}>Tin Tức TGP Hà Nội</Text> */}
                 <Image source={require('../../assets/icon-tgp.png')} style={{ width: 50, height: 50 }} />
-                    
+
                 <TouchableOpacity
                     style={styles.searchButton}
                     onPress={() => Alert.alert('Thông báo', 'Tính năng tìm kiếm đang phát triển')}

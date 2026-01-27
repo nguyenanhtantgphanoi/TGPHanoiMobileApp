@@ -8,6 +8,7 @@ import {
     Text,
     Modal,
     TouchableWithoutFeedback,
+    ScrollView,
 } from 'react-native';
 import WebView from 'react-native-webview';
 import * as Progress from 'react-native-progress';
@@ -15,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios'; // Đảm bảo đã cài đặt axios: npm install axios
 
 const THEMES = {
     white: { bg: '#ffffff', text: '#1a1a1a', card: '#ffffff', border: '#eee' },
@@ -22,7 +24,8 @@ const THEMES = {
     dark: { bg: '#121212', text: '#e0e0e0', card: '#1e1e1e', border: '#333' },
 };
 
-export default function NewsDetail({ linkWeb }) {
+// Nhận thêm postId từ props
+export default function NewsDetail({ linkWeb, postId }) {
     const webViewRef = useRef(null);
     const insets = useSafeAreaInsets();
     const navigation = useNavigation();
@@ -35,6 +38,34 @@ export default function NewsDetail({ linkWeb }) {
     const [showSettings, setShowSettings] = useState(false);
     const [fontSize, setFontSize] = useState(18);
     const [theme, setTheme] = useState('white');
+
+    // --- LOGIC AI MỚI THÊM ---
+    const [aiModalVisible, setAiModalVisible] = useState(false);
+    const [aiSummary, setAiSummary] = useState('');
+    const [loadingAI, setLoadingAI] = useState(false);
+
+    const handleSummarize = async () => {
+        setAiModalVisible(true);
+        setLoadingAI(true);
+        setAiSummary('');
+        try {
+            // Thay đổi URL này thành URL server thực tế của bạn
+            const response = await axios.post('https://news-tgphn.lamgs.io.vn/news/summarize-post', {
+                postId: postId
+            });
+            if (response.data.success) {
+                setAiSummary(response.data.data.summary);
+            } else {
+                setAiSummary("Không thể tóm tắt nội dung này. Vui lòng thử lại sau.");
+            }
+        } catch (error) {
+            setAiSummary("Lỗi kết nối server AI. Vui lòng kiểm tra mạng.");
+            console.error(error);
+        } finally {
+            setLoadingAI(false);
+        }
+    };
+    // ------------------------
 
     useEffect(() => {
         const loadSettings = async () => {
@@ -204,6 +235,12 @@ export default function NewsDetail({ linkWeb }) {
             <View style={[styles.toolbar, { paddingTop: insets.top + 10, backgroundColor: readerMode ? THEMES[theme].bg : '#fff' }]}>
                 <TouchableOpacity onPress={handleBackAction} style={styles.iconBtn}><Ionicons name="chevron-back" size={24} color={readerMode ? THEMES[theme].text : "#333"} /></TouchableOpacity>
                 <View style={[styles.urlBar, readerMode && { backgroundColor: THEMES[theme].card }]}><Text style={[styles.urlText, readerMode && { color: THEMES[theme].text }]} numberOfLines={1}>{linkWeb.split('/')[2]}</Text></View>
+
+                {/* THÊM NÚT TÓM TẮT AI VÀO THANH TOOLBAR */}
+                <TouchableOpacity onPress={handleSummarize} style={styles.iconBtn}>
+                    <Ionicons name="sparkles" size={20} color={readerMode ? "#d4a017" : "#007aff"} />
+                </TouchableOpacity>
+
                 {readerMode && <TouchableOpacity onPress={() => setShowSettings(true)} style={styles.iconBtn}><Ionicons name="text-outline" size={20} color={THEMES[theme].text} /></TouchableOpacity>}
                 <TouchableOpacity onPress={toggleReaderMode} style={[styles.readerBtn, readerMode && styles.readerBtnActive]}><Ionicons name="document-text" size={18} color={readerMode ? "#fff" : "#007aff"} /></TouchableOpacity>
             </View>
@@ -219,6 +256,7 @@ export default function NewsDetail({ linkWeb }) {
                 decelerationRate={0.998} bounces={true}
             />
 
+            {/* MODAL CÀI ĐẶT GỐC CỦA BẠN */}
             <Modal visible={showSettings} transparent animationType="slide" onRequestClose={() => setShowSettings(false)}>
                 <TouchableOpacity
                     style={styles.modalOverlay}
@@ -242,6 +280,56 @@ export default function NewsDetail({ linkWeb }) {
                     </TouchableOpacity>
                 </TouchableOpacity>
             </Modal>
+
+            <Modal
+                visible={aiModalVisible}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setAiModalVisible(false)}
+            >
+                <TouchableWithoutFeedback onPress={() => setAiModalVisible(false)}>
+                    <View style={styles.aiModalOverlay}>
+                        <TouchableWithoutFeedback>
+                            <View style={[styles.aiPanel, { backgroundColor: readerMode ? THEMES[theme].card : '#ffffff' }]}>
+                                <View style={styles.aiHeader}>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                        <Ionicons name="sparkles" size={18} color="#d4a017" />
+                                        <Text style={{ color: readerMode ? THEMES[theme].text : '#333', marginLeft: 8, fontWeight: '600' }}>Tóm tắt bởi Trợ lý AI TGP Hà Nội</Text>
+                                    </View>
+                                    <TouchableOpacity onPress={() => setAiModalVisible(false)}>
+                                        <Ionicons name="close" size={24} color={readerMode ? THEMES[theme].text : '#333'} />
+                                    </TouchableOpacity>
+                                </View>
+
+                                {/* ScrollView giúp nội dung dài vẫn đọc được trên màn hình bé */}
+                                <ScrollView
+                                    style={styles.aiScroll}
+                                    showsVerticalScrollIndicator={true} // Hiện thanh cuộn để người dùng biết là cuộn được
+                                    bounces={true}
+                                >
+                                    {loadingAI ? (
+                                        <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+                                            <ActivityIndicator color="#007aff" size="large" />
+                                            <Text style={{ marginTop: 15, color: readerMode ? THEMES[theme].text : '#666' }}>Trợ lý AI TGP Hà Nội đang xử lý...</Text>
+                                        </View>
+                                    ) : (
+                                        <Text style={[styles.aiText, { color: readerMode ? THEMES[theme].text : '#333', fontSize: fontSize - 2 }]}>
+                                            {aiSummary}
+                                        </Text>
+                                    )}
+                                </ScrollView>
+
+                                <TouchableOpacity
+                                    style={styles.aiCloseBtn}
+                                    onPress={() => setAiModalVisible(false)}
+                                >
+                                    <Text style={{ color: '#fff', fontWeight: 'bold' }}>Đóng để xem chi tiết</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </TouchableWithoutFeedback>
+                    </View>
+                </TouchableWithoutFeedback>
+            </Modal>
         </View>
     );
 }
@@ -254,11 +342,51 @@ const styles = StyleSheet.create({
     readerBtn: { width: 32, height: 32, borderRadius: 6, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f0f0f2' },
     readerBtnActive: { backgroundColor: '#007aff' },
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
-    panelContainer: { width: '100%' }, // Đảm bảo container của panel chiếm hết chiều ngang để không bị bấm hụt
+    panelContainer: { width: '100%' },
     panel: { backgroundColor: '#fff', padding: 25, borderTopLeftRadius: 24, borderTopRightRadius: 24, elevation: 5 },
     panelTitle: { textAlign: 'center', fontWeight: 'bold', marginBottom: 20, fontSize: 16 },
     row: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', marginBottom: 25 },
     btnSmall: { padding: 12, backgroundColor: '#f0f0f2', borderRadius: 10, width: 60, alignItems: 'center' },
     sizeText: { fontSize: 20, fontWeight: 'bold' }, themeCircle: { width: 45, height: 45, borderRadius: 25 },
-    closeBtn: { backgroundColor: '#007aff', padding: 16, borderRadius: 14, alignItems: 'center', marginTop: 10 }
+    closeBtn: { backgroundColor: '#007aff', padding: 16, borderRadius: 14, alignItems: 'center', marginTop: 10 },
+
+    aiModalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20
+    },
+    aiPanel: {
+        width: '100%',
+        maxHeight: '80%', // Không bao giờ vượt quá 80% chiều cao màn hình
+        borderRadius: 20,
+        padding: 20,
+        elevation: 10
+    },
+    aiHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 15,
+        borderBottomWidth: 0.5,
+        borderBottomColor: '#eee',
+        paddingBottom: 10
+    },
+    aiScroll: {
+        // ScrollView sẽ tự chiếm diện tích còn lại giữa Header và Button
+        marginBottom: 10
+    },
+    aiText: {
+        lineHeight: 28,
+        textAlign: 'justify',
+        paddingBottom: 20 // Khoảng đệm cuối để không bị sát nút đóng
+    },
+    aiCloseBtn: {
+        backgroundColor: '#007aff',
+        padding: 15,
+        borderRadius: 12,
+        alignItems: 'center',
+        marginTop: 10
+    }
 });
