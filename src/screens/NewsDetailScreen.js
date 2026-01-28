@@ -5,11 +5,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import NewsDetail from '../components/NewsDetail';
 
 export default function NewsDetailScreen({ route, navigation }) {
-    const { link } = route.params;
+    const { link, postId } = route.params;
     const insets = useSafeAreaInsets();
     return (
         <View style={styles.container}>
-            <NewsDetail linkWeb={link} />
+            <NewsDetail linkWeb={link} postId={postId} />
         </View>
     )
 }

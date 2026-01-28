@@ -1,10 +1,12 @@
-
 import './src/utils/notificationConfig'
 import { NavigationContainer } from '@react-navigation/native';
-import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
+import { StyleSheet } from 'react-native';
+import { useEffect, useState } from 'react';
+
 import HomeBottomTabNavigator from './src/navigators/HomeBottomTabNavigator';
 import InfoScreen from './src/screens/InfoScreen';
 import LMScreen from './src/screens/LMScreen';
@@ -16,9 +18,11 @@ import GXDetailScreen from './src/screens/GXDetailScreen';
 import VanKienCongNghiScreen from './src/screens/VanKienCongNghiScreen';
 import LichLeNoiThanhScreen from './src/screens/LichLeNoiThanhScreen';
 import VPCacUyBanScreen from './src/screens/VPCacUyBanScreen';
-import { registerForPushNotifications } from './src/utils/pushToken';
-import { useEffect } from 'react';
 import NewsDetailScreen from './src/screens/NewsDetailScreen';
+import { registerForPushNotifications } from './src/utils/pushToken';
+
+import DraggableAIButton from './src/components/DraggableAIButton';
+import AIChatModal from './src/components/AIChatModal';
 
 const Stack = createNativeStackNavigator();
 
@@ -29,9 +33,7 @@ function MainApp() {
       fetch('https://news-tgphn.lamgs.io.vn/notification/register-push-device', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...deviceInfo,
-        }),
+        body: JSON.stringify({ ...deviceInfo }),
       });
     });
   }, []);
@@ -39,41 +41,39 @@ function MainApp() {
   return (
     <NavigationContainer>
       <StatusBar translucent style='auto' />
-      <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName='HomeBottomTabNavigator'>
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="HomeBottomTabNavigator" component={HomeBottomTabNavigator} />
         <Stack.Screen name="InfoScreen" component={InfoScreen} />
         <Stack.Screen name="LMScreen" component={LMScreen} />
         <Stack.Screen name="GiaoXuScreen" component={GiaoXuScreen} />
         <Stack.Screen name="GiaoHatScreen" component={GiaoHatScreen} />
         <Stack.Screen name="GXDetailScreen" component={GXDetailScreen} />
-
         <Stack.Screen name="LichLeNoiThanhScreen" component={LichLeNoiThanhScreen} />
         <Stack.Screen name="VPCacUyBanScreen" component={VPCacUyBanScreen} />
-
         <Stack.Screen name="NewsDetailScreen" component={NewsDetailScreen} />
-
-        <Stack.Screen
-          name="KinhCacThanhTuDao"
-          component={KinhCacThanhTuDaoScreen}
-        />
-        <Stack.Screen
-          name="ChiTietKinh"
-          component={ChiTietKinhScreen}
-        />
-        <Stack.Screen
-          name="VanKienCongNghiScreen"
-          component={VanKienCongNghiScreen}
-        />
+        <Stack.Screen name="KinhCacThanhTuDao" component={KinhCacThanhTuDaoScreen} />
+        <Stack.Screen name="ChiTietKinh" component={ChiTietKinhScreen} />
+        <Stack.Screen name="VanKienCongNghiScreen" component={VanKienCongNghiScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
 }
 
 export default function App() {
+  const [isAIChatVisible, setAIChatVisible] = useState(false);
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <MainApp />
+
+        {/* Đưa nút ra ngoài hẳn, không bọc lót phức tạp */}
+        <DraggableAIButton onPress={() => setAIChatVisible(true)} />
+
+        <AIChatModal
+          visible={isAIChatVisible}
+          onClose={() => setAIChatVisible(false)}
+        />
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
