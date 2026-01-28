@@ -114,6 +114,8 @@ export default function NewsDetail({ linkWeb, postId }) {
             line-height: 1.3;
         }
         .content p, .content div, .content li { font-size: ${fSize}px !important; }
+        
+        /* GIỮ NGUYÊN LOGIC ẢNH CỦA BẠN */
         img, figure { 
             display: block !important;
             height: auto !important;
@@ -126,6 +128,24 @@ export default function NewsDetail({ linkWeb, postId }) {
             margin-right: -50vw !important;
             object-fit: cover;
         }
+
+        /* THÊM RIÊNG CHO YOUTUBE ĐỂ KHÔNG BỊ LỆCH */
+        .wp-block-embed-youtube .wp-block-embed__wrapper {
+            position: relative;
+            padding-bottom: 56.25%; /* Tỷ lệ 16:9 */
+            height: 0;
+            overflow: hidden;
+            width: 100%;
+        }
+
+        .wp-block-embed-youtube iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100% !important;
+            height: 100% !important;
+        }
+
         figure { margin: 20px 0; padding: 0; }
         .group-header-title { 
             font-size: ${fSize + 2}px; font-weight: bold; color: #b30000; 
