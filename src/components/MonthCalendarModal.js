@@ -511,7 +511,7 @@ const MonthCalendarModal = ({
                 color: modalColors.text,
                 fontSize: 17 * fontScale,
                 textAlign: "justify",
-                
+
             },
             strong: { fontWeight: "bold", color: modalColors.text },
             em: { fontStyle: "italic", color: modalColors.text },
@@ -644,13 +644,13 @@ const MonthCalendarModal = ({
                                                 <Text style={styles.infoTextSub}>{le.title}</Text>
                                                 <Text style={styles.summaryText}>
                                                     {le.ban_van?.bd1_le_trich_tu
-                                                        ?`${le.ban_van.bd1_le_trich_tu}; `
+                                                        ? `${le.ban_van.bd1_le_trich_tu}; `
                                                         : ""}
                                                     {le.ban_van?.bd2_trich_tu
-                                                        ? `${le.ban_van.bd2_trich_tu};`                                    
+                                                        ? `${le.ban_van.bd2_trich_tu};`
                                                         : ""}
                                                     {le.ban_van?.phuc_am_trich_tu
-                                                        ?`${le.ban_van?.phuc_am_trich_tu}`
+                                                        ? `${le.ban_van?.phuc_am_trich_tu}`
                                                         : ""}
                                                 </Text>
                                             </TouchableOpacity>
@@ -797,7 +797,7 @@ const MonthCalendarModal = ({
                                             <Text
                                                 style={[styles.secTitle, { color: modalColors.title }]}
                                             >
-                                                Bài đọc I
+                                                Bài đọc I: {selectedLe.ban_van.bd1_le_trich_tu}
                                             </Text>
                                             <RenderHTML
                                                 contentWidth={contentWidth}
@@ -811,7 +811,7 @@ const MonthCalendarModal = ({
                                             <Text
                                                 style={[styles.secTitle, { color: modalColors.title }]}
                                             >
-                                                Đáp ca
+                                                Đáp ca: {selectedLe.ban_van.dap_ca_le_trich_tu}
                                             </Text>
                                             <RenderHTML
                                                 contentWidth={contentWidth}
@@ -825,7 +825,7 @@ const MonthCalendarModal = ({
                                             <Text
                                                 style={[styles.secTitle, { color: modalColors.title }]}
                                             >
-                                                Bài đọc II
+                                                Bài đọc II: {selectedLe.ban_van.bd2_trich_tu}
                                             </Text>
                                             <RenderHTML
                                                 contentWidth={contentWidth}
@@ -957,7 +957,7 @@ const styles = StyleSheet.create({
         borderWidth: 1.5,
         borderColor: "#3498db",
     },
-    cellLeTrong: {backgroundColor: "#ebdb0569", borderRadius: 8 },
+    cellLeTrong: { backgroundColor: "#ebdb0569", borderRadius: 8 },
     dotMauAo: {
         width: 4,
         height: 4,
