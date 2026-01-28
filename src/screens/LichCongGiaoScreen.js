@@ -50,11 +50,24 @@ const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible }) => {
     const solar = Solar.fromYmd(dateObj.getFullYear(), dateObj.getMonth() + 1, dateObj.getDate());
     const lunar = solar.getLunar();
     const listLe = useMemo(() => item.arr_cac_le?.length ? item.arr_cac_le : [item], [item.arr_cac_le, item]);
+
     const [activeLeIndex, setActiveLeIndex] = useState(0);
+    // State quản lý chiều cao để PagerView co giãn theo nội dung
+    const [contentHeight, setContentHeight] = useState(180);
+
+    // Hàm đo chiều cao thực tế của nội dung chữ bên trong
+    const onLayout = (event) => {
+        const { height: layoutHeight } = event.nativeEvent.layout;
+        // Cộng thêm 40px để Lời Chúa không bị sát biên dưới PagerView
+        if (layoutHeight + 40 > contentHeight) {
+            setContentHeight(layoutHeight + 40);
+        }
+    };
+
     const lunarChi = ["Thân", "Dậu", "Tuất", "Hợi", "Tý", "Sửu", "Dần", "Mão", "Thìn", "Tỵ", "Ngọ", "Mùi"]
     const lunarCan = ["Canh", "Tân", "Nhâm", "Quý", "Giáp", "Ất", "Bính", "Đinh", "Mậu", "Kỷ"]
+
     return (
-        // <View style={[styles.page, styles.container_x]}>
         <View style={[styles.page, styles.container_x]}>
             <View style={[styles.topBlock, { marginTop: insets.top + 15 }]}>
                 <Text style={styles.dayNameText}>{daysOfWeek[dateObj.getDay()].toUpperCase()}</Text>
@@ -63,13 +76,17 @@ const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible }) => {
                     <Text style={styles.monthYearText}>THÁNG {dateObj.getMonth() + 1} NĂM {dateObj.getFullYear()}</Text>
                 </View>
                 <View style={styles.topFooter}>
-                    {/* <Text style={styles.lunarText}>Lịch âm: <Text style={styles.lunarDateHighlight}>{lunar.getDay()}/{lunar.getMonth()}</Text></Text> */}
                     <Text style={styles.lunarDateHighlight}>{lunar.getDay()}/{lunar.getMonth()}/{lunarCan[lunar.getYear() % 10]} {lunarChi[lunar.getYear() % 12]} </Text>
                 </View>
             </View>
 
             <View style={[styles.bottomBlock, { marginBottom: 60 }]}>
-                <PagerView style={styles.pagerLe} initialPage={0} onPageSelected={e => setActiveLeIndex(e.nativeEvent.position)}>
+                {/* Gán chiều cao động contentHeight vào PagerView */}
+                <PagerView
+                    style={[styles.pagerLe, { height: contentHeight }]}
+                    initialPage={0}
+                    onPageSelected={e => setActiveLeIndex(e.nativeEvent.position)}
+                >
                     {listLe.map((le, idx) => {
                         const displayTitle = le.title;
                         const displayBd1 = (idx === 0 && item.bd_1) ? item.bd_1 : (le.ban_van?.bd1_le_trich_tu || le.bd_1);
@@ -77,23 +94,38 @@ const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible }) => {
                         const displayTm = (idx === 0 && item.tin_mung) ? item.tin_mung : (le.ban_van?.phuc_am_trich_tu || le.tin_mung);
 
                         return (
-                            <TouchableOpacity key={`le-sub-item-${idx}`} activeOpacity={0.9} onPress={() => { setSelectedLe(le); setModalVisible(true); }} style={styles.lePage}>
-                                <Text style={styles.titleText}>{displayTitle}</Text>
-                                <View style={styles.infoRow}><Image source={renderAoLe(le.mau_ao_le)} style={styles.aoLeIcon} /><View style={styles.tag}><Text style={styles.tagText}>Lễ {le.bac_le}</Text></View></View>
-                                <View style={styles.summaryContainer}>
-                                    <Text style={[styles.summaryText, { fontSize: 16 }]}><Text style={styles.highlightText}>{displayBd1}{displayBd2 ? `; ${displayBd2}` : ""}{displayTm ? `; ${displayTm}` : ""}</Text></Text>
+                            <TouchableOpacity
+                                key={`le-sub-item-${idx}`}
+                                activeOpacity={0.9}
+                                onPress={() => { setSelectedLe(le); setModalVisible(true); }}
+                                style={[styles.lePage, { paddingBottom: 30 }]}
+                            >
+                                <View onLayout={onLayout}>
+                                    <Text style={styles.titleText}>{displayTitle}</Text>
+                                    <View style={styles.infoRow}>
+                                        <Image source={renderAoLe(le.mau_ao_le)} style={styles.aoLeIcon} />
+                                        <View style={styles.tag}><Text style={styles.tagText}>Lễ {le.bac_le}</Text></View>
+                                    </View>
+                                    <View style={styles.summaryContainer}>
+                                        <Text style={[styles.summaryText, { fontSize: 16 }]}>
+                                            <Text style={styles.highlightText}>{displayBd1}{displayBd2 ? `; ${displayBd2}` : ""}{displayTm ? `; ${displayTm}` : ""}</Text>
+                                        </Text>
+                                    </View>
+                                    <Text style={[styles.highlightText, { marginTop: 10, fontStyle: 'italic', textAlign: 'center', fontSize: 16 }]}>
+                                        {le.ban_van?.cau_phuc_am_tom_gon || (le.cau_loi_chua ? `"${le.cau_loi_chua}"` : "")}
+                                    </Text>
                                 </View>
-                                <Text style={[styles.highlightText, { marginTop: 10, fontStyle: 'italic', textAlign: 'center', fontSize: 16 }]}>{le.ban_van?.cau_phuc_am_tom_gon || (le.cau_loi_chua ? `"${le.cau_loi_chua}"` : "")}</Text>
                             </TouchableOpacity>
                         );
                     })}
                 </PagerView>
+
                 {listLe.length > 1 && (
                     <View style={styles.dotsContainer}>{listLe.map((_, i) => (<View key={`dot-${i}`} style={[styles.dot, activeLeIndex === i ? styles.activeDot : styles.inactiveDot]} />))}</View>
                 )}
+
                 {item?.xu_chau_luot && (
                     <View style={styles.chauLuotContainer}>
-
                         <Text style={styles.chauLuotText}>
                             <Image style={{ height: 30, width: 30 }} source={require('../../assets/images/monstrance_1.png')} />
                             {item.xu_chau_luot.trim()} Chầu Mình Thánh
@@ -101,7 +133,6 @@ const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible }) => {
                     </View>
                 )}
             </View>
-
         </View>
     );
 });
@@ -305,7 +336,8 @@ const styles = StyleSheet.create({
     lunarDateHighlight: { fontSize: 18, color: '#c0392b', fontWeight: 'bold' },
 
     bottomBlock: { width: width * 0.92, minHeight: 200, backgroundColor: 'rgba(255,255,255,0.8)', borderRadius: 28, paddingTop: 10, flexShrink: 0 },
-    pagerLe: { height: 'auto', minHeight: 180 },
+    // Bỏ height cố định để ưu tiên chiều cao động từ inline style
+    pagerLe: { width: '100%' },
     lePage: { padding: 15, borderRadius: 16, justifyContent: 'flex-start' },
     titleText: { fontSize: 20, fontWeight: 'bold', textAlign: 'center', color: '#c0392b' },
     infoRow: { alignItems: 'center' },
@@ -333,7 +365,6 @@ const styles = StyleSheet.create({
 
     dateBanner: {
         flexDirection: 'row',
-        // backgroundColor: "rgba(33, 100, 100, 0.94)",
         backgroundColor: "rgba(8, 128, 175, 0.94)",
         borderRadius: 20,
         paddingVertical: 16,
@@ -423,7 +454,6 @@ const styles = StyleSheet.create({
         opacity: 0.9,
     },
     chauLuotContainer: {
-        // marginBottom: 5,
         backgroundColor: "#f0f7ff",
         padding: 5,
         paddingHorizontal: 15,
