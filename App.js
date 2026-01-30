@@ -88,12 +88,12 @@ export default function App() {
         <MainApp />
 
         {/* Đưa nút ra ngoài hẳn, không bọc lót phức tạp */}
-        <DraggableAIButton onPress={() => setAIChatVisible(true)} />
+        {/* <DraggableAIButton onPress={() => setAIChatVisible(true)} />
 
         <AIChatModal
           visible={isAIChatVisible}
           onClose={() => setAIChatVisible(false)}
-        />
+        /> */}
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
