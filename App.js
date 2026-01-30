@@ -23,6 +23,9 @@ import { registerForPushNotifications } from './src/utils/pushToken';
 
 import DraggableAIButton from './src/components/DraggableAIButton';
 import AIChatModal from './src/components/AIChatModal';
+import { checkOTAUpdate } from './src/ota/otaUpdate';
+
+import * as Updates from 'expo-updates';
 
 const Stack = createNativeStackNavigator();
 
@@ -36,6 +39,23 @@ function MainApp() {
         body: JSON.stringify({ ...deviceInfo }),
       });
     });
+  }, []);
+  // 🔁 Check OTA khi mở app
+  useEffect(() => {
+    checkOTAUpdate();
+  }, []);
+
+  // 🧾 Log OTA (debug production)
+  useEffect(() => {
+    if (!__DEV__) {
+      console.log('[OTA] UpdateId:', Updates.updateId);
+      console.log('[OTA] RuntimeVersion:', Updates.runtimeVersion);
+    }
+  }, []);
+  useEffect(() => {
+    console.log('runtimeVersion:', Updates.runtimeVersion);
+    console.log('channel:', Updates.channel);
+    console.log('updateId:', Updates.updateId);
   }, []);
 
   return (
@@ -68,12 +88,12 @@ export default function App() {
         <MainApp />
 
         {/* Đưa nút ra ngoài hẳn, không bọc lót phức tạp */}
-        <DraggableAIButton onPress={() => setAIChatVisible(true)} />
+        {/* <DraggableAIButton onPress={() => setAIChatVisible(true)} />
 
         <AIChatModal
           visible={isAIChatVisible}
           onClose={() => setAIChatVisible(false)}
-        />
+        /> */}
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
