@@ -27,7 +27,7 @@ import {
 } from 'react-native-gesture-handler';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import RenderHTML from "react-native-render-html";
-import { useIsFocused } from '@react-navigation/native';
+import { useIsFocused, useNavigation } from '@react-navigation/native';
 import MonthCalendarModal from '../components/MonthCalendarModal';
 
 const { width, height } = Dimensions.get('window');
@@ -45,6 +45,7 @@ for (let y = 2025; y <= 2026; y++) {
 }
 
 const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible }) => {
+    const navigation = useNavigation();
     const dateObj = new Date(item.date);
     const daysOfWeek = ['Chúa Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
     const solar = Solar.fromYmd(dateObj.getFullYear(), dateObj.getMonth() + 1, dateObj.getDate());
@@ -79,7 +80,23 @@ const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible }) => {
                     <Text style={styles.lunarDateHighlight}>{lunar.getDay()}/{lunar.getMonth()}/{lunarCan[lunar.getYear() % 10]} {lunarChi[lunar.getYear() % 12]} </Text>
                 </View>
             </View>
-
+            <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => navigation.navigate('GKPVScreen', {
+                    day: dateObj.getDate().toString(),
+                    month: (dateObj.getMonth() + 1).toString(),
+                    year: dateObj.getFullYear().toString(),
+                })}
+                style={styles.prayerButton}
+            >
+                <View style={styles.prayerButtonContent}>
+                    <Image
+                        source={{ uri: 'https://img.icons8.com/ios-filled/50/ffffff/holy-bible.png' }}
+                        style={styles.prayerIcon}
+                    />
+                    <Text style={styles.prayerButtonText}>CÁC GIỜ KINH PHỤNG VỤ</Text>
+                </View>
+            </TouchableOpacity>
             <View style={[styles.bottomBlock, { marginBottom: 60 }]}>
                 {/* Gán chiều cao động contentHeight vào PagerView */}
                 <PagerView
@@ -469,6 +486,35 @@ const styles = StyleSheet.create({
         color: "#444",
         fontStyle: "italic",
         marginTop: 5,
+    },
+    prayerButton: {
+        width: width * 0.8,
+        backgroundColor: '#c0392b',
+        borderRadius: 15,
+        paddingVertical: 12,
+        marginVertical: 15,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 3,
+        elevation: 4,
+    },
+    prayerButtonContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    prayerIcon: {
+        width: 22,
+        height: 22,
+        marginRight: 10,
+        tintColor: '#fff',
+    },
+    prayerButtonText: {
+        color: '#fff',
+        fontSize: 14,
+        fontWeight: 'bold',
+        letterSpacing: 0.8,
     },
 
 });

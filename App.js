@@ -26,6 +26,7 @@ import AIChatModal from './src/components/AIChatModal';
 import { checkOTAUpdate } from './src/ota/otaUpdate';
 
 import * as Updates from 'expo-updates';
+import GKPVScreen from './src/screens/GKPVScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -74,6 +75,7 @@ function MainApp() {
         <Stack.Screen name="KinhCacThanhTuDao" component={KinhCacThanhTuDaoScreen} />
         <Stack.Screen name="ChiTietKinh" component={ChiTietKinhScreen} />
         <Stack.Screen name="VanKienCongNghiScreen" component={VanKienCongNghiScreen} />
+        <Stack.Screen name="GKPVScreen" component={GKPVScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
