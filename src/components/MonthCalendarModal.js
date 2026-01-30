@@ -811,39 +811,39 @@ const MonthCalendarModal = ({
                                             <Text
                                                 style={[styles.secTitle, { color: modalColors.title }]}
                                             >
-                                                Đáp ca: {selectedLe.ban_van.dap_ca_le_trich_tu}
+                                                Đáp ca: {selectedLe.ban_van?.dap_ca_le_trich_tu}
                                             </Text>
                                             <RenderHTML
                                                 contentWidth={contentWidth}
-                                                source={{ html: selectedLe.ban_van.dap_ca_le }}
+                                                source={{ html: selectedLe.ban_van?.dap_ca_le }}
                                                 tagsStyles={tagsStyles}
                                             />
                                         </>
                                     )}
-                                    {selectedLe.ban_van.bd2 && (
+                                    {selectedLe.ban_van?.bd2 && (
                                         <>
                                             <Text
                                                 style={[styles.secTitle, { color: modalColors.title }]}
                                             >
-                                                Bài đọc II: {selectedLe.ban_van.bd2_trich_tu}
+                                                Bài đọc II: {selectedLe.ban_van?.bd2_trich_tu}
                                             </Text>
                                             <RenderHTML
                                                 contentWidth={contentWidth}
-                                                source={{ html: selectedLe.ban_van.bd2 }}
+                                                source={{ html: selectedLe.ban_van?.bd2 }}
                                                 tagsStyles={tagsStyles}
                                             />
                                         </>
                                     )}
-                                    {selectedLe.ban_van.phuc_am && (
+                                    {selectedLe.ban_van?.phuc_am && (
                                         <>
                                             <Text
                                                 style={[styles.secTitle, { color: modalColors.title }]}
                                             >
-                                                Phúc âm
+                                                Phúc âm: {selectedLe.ban_van?.phuc_am_trich_tu}
                                             </Text>
                                             <RenderHTML
                                                 contentWidth={contentWidth}
-                                                source={{ html: selectedLe.ban_van.phuc_am }}
+                                                source={{ html: selectedLe.ban_van?.phuc_am }}
                                                 tagsStyles={tagsStyles}
                                             />
                                         </>

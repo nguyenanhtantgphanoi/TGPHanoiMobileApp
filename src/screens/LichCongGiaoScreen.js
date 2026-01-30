@@ -157,7 +157,6 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
     const [darkMode, setDarkMode] = useState(false);
 
     useImperativeHandle(ref, () => ({ goToToday: () => pagerRef.current?.setPage(initialIndex) }));
-
     const syncSettings = async () => {
         try {
             const savedFont = await AsyncStorage.getItem(FONT_SCALE_KEY);
@@ -299,13 +298,13 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
                                             )}
                                             {selectedLe.ban_van.alleluia && (
                                                 <View style={{ marginBottom: 20 }}>
-                                                    <Text style={[styles.sectionTitle, { color: modalColors.title, fontSize: 18 * fontScale }]}>Alleluia</Text>
+                                                    <Text style={[styles.sectionTitle, { color: modalColors.title, fontSize: 18 * fontScale }]}>Alleluia: {selectedLe.ban_van?.alleluia_trich_tu}</Text>
                                                     <RenderHTML contentWidth={contentWidth} source={{ html: selectedLe.ban_van.alleluia }} tagsStyles={tagsStyles} />
                                                 </View>
                                             )}
                                             {selectedLe.ban_van.phuc_am && (
                                                 <View style={{ marginBottom: 20 }}>
-                                                    <Text style={[styles.sectionTitle, { color: modalColors.title, fontSize: 18 * fontScale }]}>Phúc âm</Text>
+                                                    <Text style={[styles.sectionTitle, { color: modalColors.title, fontSize: 18 * fontScale }]}>Phúc âm: {selectedLe.ban_van?.phuc_am_trich_tu}</Text>
                                                     <RenderHTML contentWidth={contentWidth} source={{ html: selectedLe.ban_van.phuc_am }} tagsStyles={tagsStyles} />
                                                 </View>
                                             )}
