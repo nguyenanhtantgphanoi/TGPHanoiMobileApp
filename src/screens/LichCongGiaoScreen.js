@@ -188,7 +188,7 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
     const fetchData = async () => {
         try {
             const today = new Date();
-            const res = await axios.get(`https://service-tgphn.lamgs.io.vn/get-calendar?date=${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`);
+            const res = await axios.get(`https://mapp.tgphanoi.org/get-calendar?date=${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`);
             const data = [...(res.data.prev_month || []), ...(res.data.cur_month || []), ...(res.data.next_month || [])];
             const idx = data.findIndex(d => d.date === `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`);
             setAllDays(data);
@@ -199,7 +199,7 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
 
     const fetchYearData = async () => {
         try {
-            const res = await axios.get('https://service-tgphn.lamgs.io.vn/get-calendar-year');
+            const res = await axios.get('https://mapp.tgphanoi.org/get-calendar-year');
             if (Array.isArray(res.data)) setYearData(res.data);
         } catch { }
     };
@@ -211,7 +211,7 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
         setLoadingDay(true);
         try {
             const formattedDate = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
-            const res = await axios.get(`https://service-tgphn.lamgs.io.vn/get-one-day?day=${formattedDate}`);
+            const res = await axios.get(`https://mapp.tgphanoi.org/get-one-day?day=${formattedDate}`);
             if (res.data) {
                 setFullDayData(res.data);
             }

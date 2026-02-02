@@ -21,7 +21,7 @@ const { width } = Dimensions.get('window');
 const CARD_WIDTH = width - 32;
 const FEATURED_HEIGHT = 220;
 const NORMAL_IMAGE_HEIGHT = 200;
-const API_URL = 'https://news-tgphn.lamgs.io.vn/news/';
+const API_URL = 'https://mapp.tgphanoi.org/api/news/';
 
 // --- TÁCH COMPONENT TIN NỔI BẬT ĐỂ TỐI ƯU ---
 const FeaturedSection = React.memo(({ data, renderItem }) => {

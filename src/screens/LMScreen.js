@@ -84,7 +84,7 @@ export default function LMScreen({ navigation }) {
         useCallback(() => {
             const fetchData = async () => {
                 try {
-                    const res = await axios.get('https://news-tgphn.lamgs.io.vn/linhMuc/');
+                    const res = await axios.get('https://mapp.tgphanoi.org/api/linhMuc/');
                     if (res.data.success) {
                         setData(res.data.data);
                         setFilteredData(res.data.data);

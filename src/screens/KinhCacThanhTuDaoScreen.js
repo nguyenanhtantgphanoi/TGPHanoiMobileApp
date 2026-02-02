@@ -16,7 +16,7 @@ export default function KinhCacThanhTuDaoScreen({ navigation }) {
 
   useEffect(() => {
     axios
-      .get("https://news-tgphn.lamgs.io.vn/kinhNguyen/DSKinhNguyen")
+      .get("https://mapp.tgphanoi.org/api/kinhNguyen/DSKinhNguyen")
       .then((res) => {
         if (res.data.success) {
           setData(res.data.data);

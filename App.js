@@ -34,7 +34,7 @@ function MainApp() {
   useEffect(() => {
     registerForPushNotifications().then(deviceInfo => {
       if (!deviceInfo) return;
-      fetch('https://news-tgphn.lamgs.io.vn/notification/register-push-device', {
+      fetch('https://mapp.tgphanoi.org/api/notification/register-push-device', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...deviceInfo }),

@@ -24,7 +24,7 @@ export default function GiaoXuScreen({ route, navigation }) {
     useEffect(() => {
         const fetchGiaoXu = async () => {
             try {
-                const res = await axios.get('https://news-tgphn.lamgs.io.vn/giaoXu/');
+                const res = await axios.get('https://mapp.tgphanoi.org/api/giaoXu/');
                 if (res.data.success && Array.isArray(res.data.data)) {
                     setAllGiaoXu(res.data.data);
                 } else {

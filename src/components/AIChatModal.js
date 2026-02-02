@@ -29,7 +29,7 @@ const AIChatModal = ({ visible, onClose }) => {
         setLoading(true);
 
         try {
-            const response = await axios.post('https://news-tgphn.lamgs.io.vn/news/chat', { message: input });
+            const response = await axios.post('https://mapp.tgphanoi.org/api/news/chat', { message: input });
             const aiMsg = { id: (Date.now() + 1).toString(), text: response.data.reply, sender: 'ai' };
             setMessages(prev => [...prev, aiMsg]);
         } catch (error) {

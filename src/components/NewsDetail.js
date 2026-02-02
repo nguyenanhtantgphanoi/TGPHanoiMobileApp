@@ -50,7 +50,7 @@ export default function NewsDetail({ linkWeb, postId }) {
         setAiSummary('');
         try {
             // Thay đổi URL này thành URL server thực tế của bạn
-            const response = await axios.post('https://news-tgphn.lamgs.io.vn/news/summarize-post', {
+            const response = await axios.post('https://mapp.tgphanoi.org/api/news/summarize-post', {
                 postId: postId
             });
             if (response.data.success) {

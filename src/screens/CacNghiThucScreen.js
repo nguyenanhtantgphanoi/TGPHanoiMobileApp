@@ -12,11 +12,11 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 export default function CacNghiThucScreen({ navigation }) {
     const [listKinhNguyen, setListKinhNguyen] = useState([])
     const [expandedId, setExpandedId] = useState(null)
-    
+
     useEffect(() => {
         const getListKinhnguyen = async () => {
             try {
-                const response = await axios.get('https://service-tgphn.lamgs.io.vn/get-nghi-thuc-grouped');
+                const response = await axios.get('https://mapp.tgphanoi.org/get-nghi-thuc-grouped');
                 const data = response.data;
                 setListKinhNguyen(data)
                 console.log("List nghi thức: ", data)
@@ -45,7 +45,7 @@ export default function CacNghiThucScreen({ navigation }) {
                 {
                     Object.values(listKinhNguyen).map((kinhnguyen) => {
                         const isMultiLevel = kinhnguyen.data && Object.keys(kinhnguyen.data).length > 1;
-                        
+
                         return (
                             <View key={kinhnguyen._id}>
                                 <TouchableOpacity
@@ -56,7 +56,7 @@ export default function CacNghiThucScreen({ navigation }) {
                                         } else {
                                             navigation.navigate("ChiTietKinh", {
                                                 title: kinhnguyen.data[0].title,
-                                                type: null,    
+                                                type: null,
                                                 html: kinhnguyen.data[0].html
                                             });
                                         }
@@ -73,30 +73,30 @@ export default function CacNghiThucScreen({ navigation }) {
                                         )}
                                     </View>
                                 </TouchableOpacity>
-                                {isMultiLevel && expandedId === kinhnguyen._id && (                                                                    
+                                {isMultiLevel && expandedId === kinhnguyen._id && (
                                     Object.values(kinhnguyen.data).map((item) => (
                                         <View style={styles.expandedContent} key={item._id}>
-                                        <TouchableOpacity 
-                                            style={styles.viewDetailsBtn}
-                                            onPress={() => 
-                                                navigation.navigate("ChiTietKinh", {
-                                                    title: item.title,
-                                                    type: null,    
-                                                    html: item.html
-                                                })
-                                            }
-                                        >
-                                            <Text style={styles.viewDetailsBtnText}>{item.title}</Text>
-                                        </TouchableOpacity>
+                                            <TouchableOpacity
+                                                style={styles.viewDetailsBtn}
+                                                onPress={() =>
+                                                    navigation.navigate("ChiTietKinh", {
+                                                        title: item.title,
+                                                        type: null,
+                                                        html: item.html
+                                                    })
+                                                }
+                                            >
+                                                <Text style={styles.viewDetailsBtnText}>{item.title}</Text>
+                                            </TouchableOpacity>
                                         </View>
-                                    ))                                 
+                                    ))
                                 )}
                             </View>
                         );
                     })
                 }
 
-                
+
             </ScrollView>
         </View>
     );
