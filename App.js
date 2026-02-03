@@ -27,18 +27,31 @@ import { checkOTAUpdate } from './src/ota/otaUpdate';
 
 import * as Updates from 'expo-updates';
 import GKPVScreen from './src/screens/GKPVScreen';
+import axios from 'axios';
 
 const Stack = createNativeStackNavigator();
 
 function MainApp() {
   useEffect(() => {
-    registerForPushNotifications().then(deviceInfo => {
+    registerForPushNotifications().then(async (deviceInfo) => {
       if (!deviceInfo) return;
-      fetch('https://mapp.tgphanoi.org/api/notification/register-push-device', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...deviceInfo }),
-      });
+
+      try {
+        await axios.post(
+          'https://mapp.tgphanoi.org/api/notification/register-push-device',
+          {
+            ...deviceInfo,
+          },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            timeout: 15000, // optional: tránh treo request trên Android release
+          }
+        );
+      } catch (error) {
+        console.log('Register push device failed:', error?.response || error);
+      }
     });
   }, []);
   // 🔁 Check OTA khi mở app
