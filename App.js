@@ -16,7 +16,12 @@ import InfoScreen from './src/screens/InfoScreen';
 import LMScreen from './src/screens/LMScreen';
 import GiaoXuScreen from './src/screens/GiaoXuScreen';
 import GiaoHatScreen from './src/screens/GiaoHatScreen';
+import KinhCacThanhTuDaoScreen from './src/screens/KinhCacThanhTuDaoScreen';
+import ChiTietKinhScreen from './src/screens/ChiTietKinhScreen';
 import GXDetailScreen from './src/screens/GXDetailScreen';
+import VanKienCongNghiScreen from './src/screens/VanKienCongNghiScreen';
+import LichLeNoiThanhScreen from './src/screens/LichLeNoiThanhScreen';
+import VPCacUyBanScreen from './src/screens/VPCacUyBanScreen';
 import NewsDetailScreen from './src/screens/NewsDetailScreen';
 import GKPVScreen from './src/screens/GKPVScreen';
 
@@ -53,18 +58,20 @@ function MainApp() {
 
   return (
     <NavigationContainer>
-      <StatusBar style="auto" />
+      <StatusBar translucent style='auto' />
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-        <Stack.Screen
-          name="HomeBottomTabNavigator"
-          component={HomeBottomTabNavigator}
-        />
+        <Stack.Screen name="HomeBottomTabNavigator" component={HomeBottomTabNavigator} />
         <Stack.Screen name="InfoScreen" component={InfoScreen} />
         <Stack.Screen name="LMScreen" component={LMScreen} />
         <Stack.Screen name="GiaoXuScreen" component={GiaoXuScreen} />
         <Stack.Screen name="GiaoHatScreen" component={GiaoHatScreen} />
         <Stack.Screen name="GXDetailScreen" component={GXDetailScreen} />
+        <Stack.Screen name="LichLeNoiThanhScreen" component={LichLeNoiThanhScreen} />
+        <Stack.Screen name="VPCacUyBanScreen" component={VPCacUyBanScreen} />
         <Stack.Screen name="NewsDetailScreen" component={NewsDetailScreen} />
+        <Stack.Screen name="KinhCacThanhTuDao" component={KinhCacThanhTuDaoScreen} />
+        <Stack.Screen name="ChiTietKinh" component={ChiTietKinhScreen} />
+        <Stack.Screen name="VanKienCongNghiScreen" component={VanKienCongNghiScreen} />
         <Stack.Screen name="GKPVScreen" component={GKPVScreen} />
       </Stack.Navigator>
     </NavigationContainer>
