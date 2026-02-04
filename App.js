@@ -73,6 +73,8 @@ function MainApp() {
         <Stack.Screen name="ChiTietKinh" component={ChiTietKinhScreen} />
         <Stack.Screen name="VanKienCongNghiScreen" component={VanKienCongNghiScreen} />
         <Stack.Screen name="GKPVScreen" component={GKPVScreen} />
+
+
       </Stack.Navigator>
     </NavigationContainer>
   );
