@@ -20,7 +20,7 @@ export const UpdateOverlay = React.memo(({ isUpdating, progress }) => {
                 <View style={styles.modal}>
                     <Text style={styles.title}>Đang cập nhật...</Text>
                     <Text style={styles.progress}>{progress}%</Text>
-                    <ActivityIndicator size="large" color="#007AFF" />
+                    <ActivityIndicator size="large" color="#d59d2c" />
                 </View>
             </View>
         </Modal>
