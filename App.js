@@ -1,11 +1,15 @@
-import './src/utils/notificationConfig'
-import { NavigationContainer } from '@react-navigation/native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import './src/utils/notificationConfig';
+
+import { useEffect, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet } from 'react-native';
-import { useEffect, useState } from 'react';
+import axios from 'axios';
+
+import { setupNotificationChannel } from './src/utils/notificationChannel';
+import { registerForPushNotifications } from './src/utils/pushToken';
 
 import HomeBottomTabNavigator from './src/navigators/HomeBottomTabNavigator';
 import InfoScreen from './src/screens/InfoScreen';
@@ -19,44 +23,40 @@ import VanKienCongNghiScreen from './src/screens/VanKienCongNghiScreen';
 import LichLeNoiThanhScreen from './src/screens/LichLeNoiThanhScreen';
 import VPCacUyBanScreen from './src/screens/VPCacUyBanScreen';
 import NewsDetailScreen from './src/screens/NewsDetailScreen';
-import { registerForPushNotifications } from './src/utils/pushToken';
-
-import DraggableAIButton from './src/components/DraggableAIButton';
-import AIChatModal from './src/components/AIChatModal';
-import { checkOTAUpdate } from './src/ota/otaUpdate';
-
-import * as Updates from 'expo-updates';
 import GKPVScreen from './src/screens/GKPVScreen';
+import { useUpdateVersion } from './src/hooks/useUpdateVersion';
+import { UpdateOverlay } from './src/components/UpdateOverlay';
 
 const Stack = createNativeStackNavigator();
 
 function MainApp() {
-  useEffect(() => {
-    registerForPushNotifications().then(deviceInfo => {
-      if (!deviceInfo) return;
-      fetch('https://mapp.tgphanoi.org/api/notification/register-push-device', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...deviceInfo }),
-      });
-    });
-  }, []);
-  // 🔁 Check OTA khi mở app
-  useEffect(() => {
-    checkOTAUpdate();
-  }, []);
 
-  // 🧾 Log OTA (debug production)
   useEffect(() => {
-    if (!__DEV__) {
-      console.log('[OTA] UpdateId:', Updates.updateId);
-      console.log('[OTA] RuntimeVersion:', Updates.runtimeVersion);
-    }
-  }, []);
-  useEffect(() => {
-    console.log('runtimeVersion:', Updates.runtimeVersion);
-    console.log('channel:', Updates.channel);
-    console.log('updateId:', Updates.updateId);
+    (async () => {
+      // 1️⃣ Tạo notification channel (Android)
+      await setupNotificationChannel();
+
+      // 2️⃣ Lấy push token
+      const deviceInfo = await registerForPushNotifications();
+      if (!deviceInfo) return;
+
+      // 3️⃣ Gửi token lên backend
+      try {
+        await axios.post(
+          'https://mapp.tgphanoi.org/api/notification/register-push-device',
+          deviceInfo,
+          {
+            headers: { 'Content-Type': 'application/json' },
+            timeout: 15000,
+          }
+        );
+      } catch (error) {
+        console.log(
+          'Register push device failed:',
+          error?.response || error
+        );
+      }
+    })();
   }, []);
 
   return (
@@ -76,26 +76,22 @@ function MainApp() {
         <Stack.Screen name="ChiTietKinh" component={ChiTietKinhScreen} />
         <Stack.Screen name="VanKienCongNghiScreen" component={VanKienCongNghiScreen} />
         <Stack.Screen name="GKPVScreen" component={GKPVScreen} />
+
+
       </Stack.Navigator>
     </NavigationContainer>
   );
 }
 
 export default function App() {
-  const [isAIChatVisible, setAIChatVisible] = useState(false);
-
+  const { data } = useUpdateVersion();
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <MainApp />
-
-        {/* Đưa nút ra ngoài hẳn, không bọc lót phức tạp */}
-        {/* <DraggableAIButton onPress={() => setAIChatVisible(true)} />
-
-        <AIChatModal
-          visible={isAIChatVisible}
-          onClose={() => setAIChatVisible(false)}
-        /> */}
+        <UpdateOverlay
+          isUpdating={data.state.isUpdating}
+          progress={data.state.progress} />
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

@@ -2,7 +2,7 @@
   "expo": {
     "name": "TGP Hà Nội",
     "slug": "tgp-hn",
-    "version": "1.0.6",
+    "version": "1.0.7",
     "orientation": "portrait",
     "icon": "./assets/icon-tgp.png",
     "userInterfaceStyle": "light",
@@ -12,7 +12,7 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "plugins": [["expo-notifications"]],
+    "plugins": ["react-native-ota-hot-update", ["expo-notifications"]],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.application.tgphn",
@@ -21,8 +21,9 @@
       }
     },
     "android": {
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/icon-tgp.png",
+        "foregroundImage": "./assets/ic_launcher_foreground.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,

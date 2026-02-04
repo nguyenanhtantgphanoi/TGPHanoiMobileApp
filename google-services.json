@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "898387877317",
+    "project_id": "tgphn-push-notification",
+    "storage_bucket": "tgphn-push-notification.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:898387877317:android:daa798490ccdca834affac",
+        "android_client_info": {
+          "package_name": "com.application.tgphn"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDZ87A_Hp_ZBQ3twchlQJqcBNTbYNC65jQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
