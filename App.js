@@ -24,10 +24,13 @@ import LichLeNoiThanhScreen from './src/screens/LichLeNoiThanhScreen';
 import VPCacUyBanScreen from './src/screens/VPCacUyBanScreen';
 import NewsDetailScreen from './src/screens/NewsDetailScreen';
 import GKPVScreen from './src/screens/GKPVScreen';
+import { useUpdateVersion } from './src/hooks/useUpdateVersion';
+import { UpdateOverlay } from './src/components/UpdateOverlay';
 
 const Stack = createNativeStackNavigator();
 
 function MainApp() {
+
   useEffect(() => {
     (async () => {
       // 1️⃣ Tạo notification channel (Android)
@@ -81,10 +84,14 @@ function MainApp() {
 }
 
 export default function App() {
+  const { data } = useUpdateVersion();
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <MainApp />
+        <UpdateOverlay
+          isUpdating={data.state.isUpdating}
+          progress={data.state.progress} />
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
