@@ -327,8 +327,10 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
                                             )}
                                             {selectedLe.articles && (
                                                 <View style={{ marginBottom: 20 }}>
-                                                    <Text style={[styles.sectionTitle, { color: modalColors.title, fontSize: 18 * fontScale }]}>Suy niệm: {selectedLe.articles[0]?.title}</Text>
-                                                    <RenderHTML contentWidth={contentWidth} source={{ html: selectedLe.articles[0].content }} tagsStyles={tagsStyles} />
+                                                    <Text style={[styles.sectionTitle, { color: modalColors.title, fontSize: 18 * fontScale }]}>{selectedLe.articles[0]?`Suy niệm:`:''}</Text>
+                                                    <Text style={[styles.sectionTitle, { color: modalColors.titleText, fontSize: 18 * fontScale, textAlign: 'center' }]}>{selectedLe.articles[0]?.title}</Text>
+                                                    <Text style={[styles.sectionTitle, { color: modalColors.titleText, fontSize: 18 * fontScale, textAlign: 'center', fontStyle: 'italic', fontWeight: 'regular' }]}>{selectedLe.articles[0]?.author}</Text>
+                                                    <RenderHTML contentWidth={contentWidth} source={{ html: selectedLe.articles[0]?.content }} tagsStyles={tagsStyles} />
                                                 </View>
                                             )}
                                         </>
