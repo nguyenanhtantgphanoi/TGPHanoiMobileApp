@@ -46,6 +46,7 @@ for (let y = 2025; y <= 2026; y++) {
 
 const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible }) => {
     const navigation = useNavigation();
+    const { width: screenWidth, height: screenHeight } = useWindowDimensions();
     const dateObj = new Date(item.date);
     const daysOfWeek = ['Chúa Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
     const solar = Solar.fromYmd(dateObj.getFullYear(), dateObj.getMonth() + 1, dateObj.getDate());
@@ -54,30 +55,72 @@ const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible }) => {
 
     const [activeLeIndex, setActiveLeIndex] = useState(0);
     // State quản lý chiều cao để PagerView co giãn theo nội dung
-    const [contentHeight, setContentHeight] = useState(180);
+    const [contentHeight, setContentHeight] = useState(160);
+
+    const isVerySmall = screenWidth <= 320;
+    const isNarrow = screenWidth < 360;
+    const isVeryShort = screenHeight < 680;
+    const isCompactHeight = screenHeight < 760;
+    const responsiveTopWidth = Math.min(screenWidth * (isVerySmall ? 0.98 : (isNarrow ? 0.94 : 0.9)), 460);
+    const responsiveBottomWidth = Math.min(screenWidth * (isVerySmall ? 0.99 : (isNarrow ? 0.96 : 0.92)), 480);
+    const responsivePrayerWidth = Math.min(screenWidth * (isVerySmall ? 0.96 : (isNarrow ? 0.92 : 0.82)), 420);
+    const dayFontSize = isVeryShort ? 54 : (isCompactHeight ? 70 : (isNarrow ? 88 : 100));
+    const dayNameFontSize = isVerySmall ? 16 : (isNarrow ? 19 : 24);
+    const monthYearFontSize = isVerySmall ? 12 : (isNarrow ? 14 : 18);
+    const lunarFontSize = isVerySmall ? 12 : (isNarrow ? 14 : 18);
+    const prayerVertical = isVeryShort ? 7 : (isCompactHeight ? 9 : 12);
+    const bottomMargin = isVeryShort ? 2 : (isCompactHeight ? 8 : 40);
+    const maxPagerHeight = Math.max(130, Math.floor(screenHeight * (isVeryShort ? 0.29 : (isCompactHeight ? 0.34 : 0.42))));
 
     // Hàm đo chiều cao thực tế của nội dung chữ bên trong
     const onLayout = (event) => {
         const { height: layoutHeight } = event.nativeEvent.layout;
         // Cộng thêm 40px để Lời Chúa không bị sát biên dưới PagerView
-        if (layoutHeight + 40 > contentHeight) {
-            setContentHeight(layoutHeight + 40);
+        const extraPadding = isVeryShort ? 22 : 34;
+        const nextHeight = Math.min(maxPagerHeight, layoutHeight + extraPadding);
+        if (nextHeight !== contentHeight) {
+            setContentHeight(nextHeight);
         }
     };
+
+    useEffect(() => {
+        if (contentHeight > maxPagerHeight) {
+            setContentHeight(maxPagerHeight);
+        }
+    }, [contentHeight, maxPagerHeight]);
 
     const lunarChi = ["Thân", "Dậu", "Tuất", "Hợi", "Tý", "Sửu", "Dần", "Mão", "Thìn", "Tỵ", "Ngọ", "Mùi"]
     const lunarCan = ["Canh", "Tân", "Nhâm", "Quý", "Giáp", "Ất", "Bính", "Đinh", "Mậu", "Kỷ"]
 
     return (
-        <View style={[styles.page, styles.container_x]}>
-            <View style={[styles.topBlock, { marginTop: insets.top + 15 }]}>
-                <Text style={styles.dayNameText}>{daysOfWeek[dateObj.getDay()].toUpperCase()}</Text>
+        <View style={[styles.page, styles.container_x, (isVeryShort || isCompactHeight) && { justifyContent: 'flex-start' }]}>
+            <View
+                style={[
+                    styles.topBlock,
+                    {
+                        marginTop: insets.top + (isVeryShort ? 2 : (isCompactHeight ? 6 : 15)),
+                        width: responsiveTopWidth,
+                        padding: isVerySmall ? 8 : (isCompactHeight ? 12 : 20),
+                        borderRadius: isVerySmall ? 18 : 24,
+                    },
+                ]}
+            >
+                <Text
+                    numberOfLines={1}
+                    style={[styles.dayNameText, { fontSize: dayNameFontSize, width: '100%', textAlign: 'center' }]}
+                >
+                    {daysOfWeek[dateObj.getDay()].toUpperCase()}
+                </Text>
                 <View style={styles.mainDateContainer}>
-                    <Text style={styles.dayNumText}>{dateObj.getDate()}</Text>
-                    <Text style={styles.monthYearText}>THÁNG {dateObj.getMonth() + 1} NĂM {dateObj.getFullYear()}</Text>
+                    <Text style={[styles.dayNumText, { fontSize: dayFontSize }]}>{dateObj.getDate()}</Text>
+                    <Text numberOfLines={1} style={[styles.monthYearText, { fontSize: monthYearFontSize, textAlign: 'center' }]}>
+                        THÁNG {dateObj.getMonth() + 1} NĂM {dateObj.getFullYear()}
+                    </Text>
                 </View>
                 <View style={styles.topFooter}>
-                    <Text style={styles.lunarDateHighlight}>{lunar.getDay()}/{lunar.getMonth()}/{lunarCan[lunar.getYear() % 10]} {lunarChi[lunar.getYear() % 12]} </Text>
+                    <Text numberOfLines={1} style={[styles.lunarDateHighlight, { fontSize: lunarFontSize, textAlign: 'center' }]}>
+                        {lunar.getDay()}/{lunar.getMonth()}/{lunarCan[lunar.getYear() % 10]} {lunarChi[lunar.getYear() % 12]}
+                    </Text>
                 </View>
             </View>
             <TouchableOpacity
@@ -87,17 +130,39 @@ const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible }) => {
                     month: (dateObj.getMonth() + 1).toString(),
                     year: dateObj.getFullYear().toString(),
                 })}
-                style={styles.prayerButton}
+                style={[styles.prayerButton, { width: responsivePrayerWidth, paddingVertical: prayerVertical, marginVertical: isCompactHeight ? 6 : 15 }]}
             >
-                <View style={styles.prayerButtonContent}>
+                <View style={[styles.prayerButtonContent, { paddingHorizontal: isVerySmall ? 6 : 0 }]}> 
                     <Image
                         source={{ uri: 'https://img.icons8.com/ios-filled/50/ffffff/holy-bible.png' }}
-                        style={styles.prayerIcon}
+                        style={[styles.prayerIcon, isVerySmall && { marginRight: 6 }]}
                     />
-                    <Text style={styles.prayerButtonText}>CÁC GIỜ KINH PHỤNG VỤ</Text>
+                    <Text
+                        numberOfLines={1}
+                        style={[
+                            styles.prayerButtonText,
+                            {
+                                fontSize: isVerySmall ? 12 : (isNarrow ? 13 : 14),
+                                letterSpacing: isVerySmall ? 0.2 : 0.8,
+                                flexShrink: 1,
+                            },
+                        ]}
+                    >
+                        CÁC GIỜ KINH PHỤNG VỤ
+                    </Text>
                 </View>
             </TouchableOpacity>
-            <View style={[styles.bottomBlock, { marginBottom: 60 }]}>
+            <View
+                style={[
+                    styles.bottomBlock,
+                    {
+                        marginBottom: bottomMargin,
+                        width: responsiveBottomWidth,
+                        paddingTop: isVeryShort ? 6 : 10,
+                        minHeight: isVeryShort ? 130 : 200,
+                    },
+                ]}
+            > 
                 {/* Gán chiều cao động contentHeight vào PagerView */}
                 <PagerView
                     style={[styles.pagerLe, { height: contentHeight }]}
@@ -115,20 +180,20 @@ const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible }) => {
                                 key={`le-sub-item-${idx}`}
                                 activeOpacity={0.9}
                                 onPress={() => { setSelectedLe(le); setModalVisible(true); }}
-                                style={[styles.lePage, { paddingBottom: 30 }]}
+                                style={[styles.lePage, { paddingBottom: isVeryShort ? 20 : 30, paddingHorizontal: isVerySmall ? 10 : 15 }]}
                             >
                                 <View onLayout={onLayout}>
-                                    <Text style={styles.titleText}>{displayTitle}</Text>
+                                    <Text style={[styles.titleText, { fontSize: isVerySmall ? 17 : 20 }]}>{displayTitle}</Text>
                                     <View style={styles.infoRow}>
                                         <Image source={renderAoLe(le.mau_ao_le)} style={styles.aoLeIcon} />
                                         <View style={styles.tag}><Text style={styles.tagText}>Lễ {le.bac_le}</Text></View>
                                     </View>
                                     <View style={styles.summaryContainer}>
-                                        <Text style={[styles.summaryText, { fontSize: 16 }]}>
+                                        <Text style={[styles.summaryText, { fontSize: isVerySmall ? 14 : 16 }]}>
                                             <Text style={styles.highlightText}>{displayBd1}{displayBd2 ? `; ${displayBd2}` : ""}{displayTm ? `; ${displayTm}` : ""}</Text>
                                         </Text>
                                     </View>
-                                    <Text style={[styles.highlightText, { marginTop: 10, fontStyle: 'italic', textAlign: 'center', fontSize: 16 }]}>
+                                    <Text style={[styles.highlightText, { marginTop: isVeryShort ? 6 : 10, fontStyle: 'italic', textAlign: 'center', fontSize: isVerySmall ? 14 : 16 }]}>
                                         {le.ban_van?.cau_phuc_am_tom_gon || (le.cau_loi_chua ? `"${le.cau_loi_chua}"` : "")}
                                     </Text>
                                 </View>
@@ -290,7 +355,7 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
                                         <TouchableOpacity onPress={() => { const s = Math.min(1.8, fontScale + 0.1); setFontScale(s); AsyncStorage.setItem(FONT_SCALE_KEY, s.toString()) }}><Text style={{ fontSize: 20, color: modalColors.text, padding: 5 }}>A+</Text></TouchableOpacity>
                                     </View>
                                     <TouchableOpacity onPress={() => { const m = !darkMode; setDarkMode(m); AsyncStorage.setItem(DARK_MODE_KEY, m.toString()) }}><Text style={{ fontSize: 20 }}>{darkMode ? "🌙" : "☀️"}</Text></TouchableOpacity>
-                                    <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeButton}><Text style={[styles.closeButtonText, { color: modalColors.title }]}>✕ Đóng</Text></TouchableOpacity>
+                                    <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeButton}><Text numberOfLines={1} style={[styles.closeButtonText, { color: modalColors.title }]}>✕ Đóng</Text></TouchableOpacity>
                                 </View>
                                 <ScrollView contentContainerStyle={styles.modalScrollContent}>
                                     {selectedLe?.ban_van && (
@@ -376,7 +441,16 @@ const styles = StyleSheet.create({
     activeDot: { backgroundColor: '#c0392b', width: 16 },
     inactiveDot: { backgroundColor: '#ccc' },
     modalContainer: { flex: 1 },
-    controlBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 10, borderBottomWidth: 1 },
+    controlBar: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderBottomWidth: 1,
+        flexWrap: 'wrap',
+        rowGap: 8,
+    },
     closeButton: { padding: 5 },
     closeButtonText: { fontSize: 16, fontWeight: 'bold' },
     modalScrollContent: { padding: 20 },
