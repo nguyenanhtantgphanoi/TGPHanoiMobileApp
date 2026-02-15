@@ -74,6 +74,7 @@ const buildNormalizedTextWithMap = (text) => {
     return { normalizedText: normalizedChars.join(""), map };
 };
 
+
 /* ================= SCREEN ================= */
 export default function ChiTietKinhScreen({ route, navigation }) {
     const { html } = route.params;
@@ -85,11 +86,11 @@ export default function ChiTietKinhScreen({ route, navigation }) {
     const [ready, setReady] = useState(false);
     const [showSearch, setShowSearch] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
-    const [pendingScrollIndex, setPendingScrollIndex] = useState(null);
     const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
+    const [pendingScrollIndex, setPendingScrollIndex] = useState(null);
+    const [contentHeight, setContentHeight] = useState(0);
+    const [viewportHeight, setViewportHeight] = useState(0);
     const scrollRef = useRef(null);
-    const contentRef = useRef(null);
-    const matchRefMap = useRef({});
 
     /* ========== LOAD & SYNC SETTINGS ========== */
     const loadSettings = async () => {
@@ -128,14 +129,14 @@ export default function ChiTietKinhScreen({ route, navigation }) {
 
     const bodyHtml = useMemo(() => extractBodyHTML(html), [html]);
     const trimmedQuery = useMemo(() => searchQuery.trim(), [searchQuery]);
-    const { highlightedHtml, matchCount } = useMemo(() => {
+    const { highlightedHtml, matchCount, matches, plainLength } = useMemo(() => {
         if (!trimmedQuery || !bodyHtml) {
-            return { highlightedHtml: bodyHtml, matchCount: 0 };
+            return { highlightedHtml: bodyHtml, matchCount: 0, matches: [], plainLength: 0 };
         }
 
         const normalizedQuery = normalizeForSearch(trimmedQuery).toLowerCase();
         if (!normalizedQuery) {
-            return { highlightedHtml: bodyHtml, matchCount: 0 };
+            return { highlightedHtml: bodyHtml, matchCount: 0, matches: [], plainLength: 0 };
         }
 
         const { plainText, map: plainToHtml } = buildPlainTextIndex(bodyHtml);
@@ -143,10 +144,10 @@ export default function ChiTietKinhScreen({ route, navigation }) {
         const normalizedTextLower = normalizedText.toLowerCase();
 
         if (!normalizedTextLower.includes(normalizedQuery)) {
-            return { highlightedHtml: bodyHtml, matchCount: 0 };
+            return { highlightedHtml: bodyHtml, matchCount: 0, matches: [], plainLength: plainText.length };
         }
 
-        const matches = [];
+        const foundMatches = [];
         let searchIndex = 0;
 
         while (searchIndex <= normalizedTextLower.length - normalizedQuery.length) {
@@ -167,29 +168,44 @@ export default function ChiTietKinhScreen({ route, navigation }) {
             if (contiguous) {
                 const startHtml = plainToHtml[startPlain];
                 const endHtml = plainToHtml[endPlain - 1] + 1;
-                matches.push({ startHtml, endHtml, index: matches.length });
+                foundMatches.push({
+                    startHtml,
+                    endHtml,
+                    startPlain,
+                    endPlain,
+                    index: foundMatches.length,
+                });
             }
 
             searchIndex = matchIndex + normalizedQuery.length;
         }
 
-        if (!matches.length) {
-            return { highlightedHtml: bodyHtml, matchCount: 0 };
+        if (!foundMatches.length) {
+            return { highlightedHtml: bodyHtml, matchCount: 0, matches: [], plainLength: plainText.length };
         }
 
+        const activeIndex = Math.min(currentMatchIndex, foundMatches.length - 1);
         let nextHtml = bodyHtml;
-        for (let i = matches.length - 1; i >= 0; i -= 1) {
-            const { startHtml, endHtml, index } = matches[i];
+        for (let i = foundMatches.length - 1; i >= 0; i -= 1) {
+            const { startHtml, endHtml, index } = foundMatches[i];
+            const className =
+                index === activeIndex ? "search-hit search-hit-active" : "search-hit";
+
             nextHtml =
                 nextHtml.slice(0, startHtml) +
-                `<span class="search-hit" data-hit-index="${index}">` +
+                `<span class="${className}" data-hit-index="${index}">` +
                 nextHtml.slice(startHtml, endHtml) +
                 "</span>" +
                 nextHtml.slice(endHtml);
         }
 
-        return { highlightedHtml: nextHtml, matchCount: matches.length };
-    }, [bodyHtml, trimmedQuery]);
+        return {
+            highlightedHtml: nextHtml,
+            matchCount: foundMatches.length,
+            matches: foundMatches,
+            plainLength: plainText.length,
+        };
+    }, [bodyHtml, trimmedQuery, currentMatchIndex]);
 
     /* ========== THEME ========== */
     const colors = useMemo(
@@ -236,13 +252,16 @@ export default function ChiTietKinhScreen({ route, navigation }) {
                 color: colors.text,
                 paddingHorizontal: 2,
             },
+            'search-hit-active': {
+                backgroundColor: darkMode ? "#8A6E00" : "#FFD54F",
+                color: colors.text,
+                paddingHorizontal: 2,
+            },
         }),
         [fontScale, colors, darkMode]
     );
 
     useEffect(() => {
-        matchRefMap.current = {};
-
         if (!showSearch || !trimmedQuery || matchCount === 0) {
             setPendingScrollIndex(null);
             setCurrentMatchIndex(0);
@@ -253,99 +272,72 @@ export default function ChiTietKinhScreen({ route, navigation }) {
         setPendingScrollIndex(0);
     }, [showSearch, trimmedQuery, matchCount]);
 
+    useEffect(() => {
+        if (matchCount > 0 && currentMatchIndex > matchCount - 1) {
+            setCurrentMatchIndex(0);
+        }
+    }, [matchCount, currentMatchIndex]);
+
+    useEffect(() => {
+        if (pendingScrollIndex === null || !matches.length) return;
+        if (contentHeight <= 0 || viewportHeight <= 0) return;
+
+        const match = matches[pendingScrollIndex];
+        if (!match) {
+            setPendingScrollIndex(null);
+            return;
+        }
+
+        const maxScrollY = Math.max(0, contentHeight - viewportHeight);
+        const ratio = plainLength > 1 ? match.startPlain / (plainLength - 1) : 0;
+        const targetY = Math.max(0, Math.min(maxScrollY, ratio * maxScrollY - 12));
+
+        scrollRef.current?.scrollTo({ y: targetY, animated: true });
+        setPendingScrollIndex(null);
+    }, [pendingScrollIndex, matches, plainLength, contentHeight, viewportHeight]);
+
     const toggleSearch = () => {
         setShowSearch((prev) => {
             const next = !prev;
-            if (!next) setSearchQuery("");
+            if (!next) {
+                setSearchQuery("");
+                setCurrentMatchIndex(0);
+                setPendingScrollIndex(null);
+            }
             return next;
         });
     };
 
-    const scrollToMatch = (index) => {
-        const matchNode = matchRefMap.current[index];
-        const contentNode = contentRef.current;
-
-        if (matchNode && contentNode) {
-            matchNode.measureLayout(
-                contentNode,
-                (x, y) => {
-                    scrollRef.current?.scrollTo({ y: Math.max(0, y - 12), animated: true });
-                    setPendingScrollIndex(null);
-                },
-                () => {
-                    setPendingScrollIndex(index);
-                }
-            );
-            return;
-        }
-
-        setPendingScrollIndex(index);
-    };
-
     const handleSearchChange = (text) => {
-        const shouldScrollFirst = text.endsWith(" ") && normalizeForSearch(text.trim()).length > 0;
-
         setSearchQuery(text);
-
-        if (shouldScrollFirst && matchCount > 0) {
+        if (text.trim().length > 0) {
             setCurrentMatchIndex(0);
-            scrollToMatch(0);
+            setPendingScrollIndex(0);
+        } else {
+            setPendingScrollIndex(null);
         }
     };
 
     const goToNextMatch = () => {
         if (matchCount === 0) return;
-        const nextIndex = (currentMatchIndex + 1) % matchCount;
-        setCurrentMatchIndex(nextIndex);
-        scrollToMatch(nextIndex);
+
+        setCurrentMatchIndex((prev) => {
+            const nextIndex = (prev + 1) % matchCount;
+            setPendingScrollIndex(nextIndex);
+            return nextIndex;
+        });
     };
 
     const goToPrevMatch = () => {
         if (matchCount === 0) return;
-        const prevIndex = (currentMatchIndex - 1 + matchCount) % matchCount;
-        setCurrentMatchIndex(prevIndex);
-        scrollToMatch(prevIndex);
+
+        setCurrentMatchIndex((prev) => {
+            const prevIndex = (prev - 1 + matchCount) % matchCount;
+            setPendingScrollIndex(prevIndex);
+            return prevIndex;
+        });
     };
 
-    const renderers = useMemo(
-        () => ({
-            span: ({ TDefaultRenderer, ...props }) => {
-                const className = props?.tnode?.attributes?.class || "";
-                const isSearchHit = className.split(" ").includes("search-hit");
-                const hitIndex = Number(props?.tnode?.attributes?.["data-hit-index"]);
-
-                if (!isSearchHit || Number.isNaN(hitIndex)) {
-                    return <TDefaultRenderer {...props} />;
-                }
-
-                return (
-                    <Text
-                        ref={(node) => {
-                            if (!node) return;
-                            matchRefMap.current[hitIndex] = node;
-
-                            if (pendingScrollIndex === hitIndex && contentRef.current) {
-                                node.measureLayout(
-                                    contentRef.current,
-                                    (x, y) => {
-                                        scrollRef.current?.scrollTo({ y: Math.max(0, y - 12), animated: true });
-                                        setPendingScrollIndex(null);
-                                    },
-                                    () => {
-                                        setPendingScrollIndex(hitIndex);
-                                    }
-                                );
-                            }
-                        }}
-                        style={{ backgroundColor: darkMode ? "#5C4B00" : "#FFE58A" }}
-                    >
-                        <TDefaultRenderer {...props} />
-                    </Text>
-                );
-            },
-        }),
-        [darkMode, pendingScrollIndex]
-    );
     if (!ready) return null;
 
     return (
@@ -432,7 +424,11 @@ export default function ChiTietKinhScreen({ route, navigation }) {
                             />
                             {!!searchQuery && (
                                 <TouchableOpacity
-                                    onPress={() => setSearchQuery("")}
+                                    onPress={() => {
+                                        setSearchQuery("");
+                                        setCurrentMatchIndex(0);
+                                        setPendingScrollIndex(null);
+                                    }}
                                     style={{
                                         position: "absolute",
                                         right: 10,
@@ -477,16 +473,24 @@ export default function ChiTietKinhScreen({ route, navigation }) {
             )}
 
             {/* ========== CONTENT ========== */}
-            <ScrollView ref={scrollRef} contentContainerStyle={{ padding: 16 }}>
-                <View ref={contentRef} collapsable={false}>
+            <ScrollView
+                ref={scrollRef}
+                contentContainerStyle={{ padding: 16 }}
+                onLayout={(event) => {
+                    setViewportHeight(event.nativeEvent.layout.height);
+                }}
+                onContentSizeChange={(w, h) => {
+                    setContentHeight(h);
+                }}
+            >
+                <View>
                     <RenderHTML
                         contentWidth={width}
                         source={{ html: highlightedHtml }}
-                        ignoredDomTags={["head", "style", "meta", "link"]}
+                        ignoredDomTags={["head", "meta", "link"]}
                         enableCSSInlineProcessing={false}
                         tagsStyles={tagsStyles}
                         classesStyles={classesStyles}
-                        renderers={renderers}
                         baseStyle={{ color: colors.text, backgroundColor: colors.bg }}
                         defaultTextProps={{ selectable: true }}
                     />
