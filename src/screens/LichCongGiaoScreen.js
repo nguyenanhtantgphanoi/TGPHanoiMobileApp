@@ -52,10 +52,14 @@ const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible }) => {
     const solar = Solar.fromYmd(dateObj.getFullYear(), dateObj.getMonth() + 1, dateObj.getDate());
     const lunar = solar.getLunar();
     const listLe = useMemo(() => item.arr_cac_le?.length ? item.arr_cac_le : [item], [item.arr_cac_le, item]);
+    const hasXuChauLuot = Boolean(item?.xu_chau_luot?.trim());
 
     const [activeLeIndex, setActiveLeIndex] = useState(0);
     // State quản lý chiều cao để PagerView co giãn theo nội dung
     const [contentHeight, setContentHeight] = useState(160);
+    const [pageContentHeights, setPageContentHeights] = useState({});
+    const [xuChauLuotMeasuredHeight, setXuChauLuotMeasuredHeight] = useState(0);
+    const [dotsMeasuredHeight, setDotsMeasuredHeight] = useState(0);
 
     const isVerySmall = screenWidth <= 320;
     const isNarrow = screenWidth < 360;
@@ -69,17 +73,107 @@ const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible }) => {
     const monthYearFontSize = isVerySmall ? 12 : (isNarrow ? 14 : 18);
     const lunarFontSize = isVerySmall ? 12 : (isNarrow ? 14 : 18);
     const prayerVertical = isVeryShort ? 7 : (isCompactHeight ? 9 : 12);
-    const bottomMargin = isVeryShort ? 2 : (isCompactHeight ? 8 : 40);
-    const maxPagerHeight = Math.max(130, Math.floor(screenHeight * (isVeryShort ? 0.29 : (isCompactHeight ? 0.34 : 0.42))));
+    const baseBottomMargin = hasXuChauLuot ? (isVeryShort ? 0 : 8) : (isVeryShort ? 2 : (isCompactHeight ? 8 : 40));
+    const tabBarClearance = Math.max(12, insets.bottom + 8);
+    const bottomMargin = baseBottomMargin + tabBarClearance;
 
-    // Hàm đo chiều cao thực tế của nội dung chữ bên trong
-    const onLayout = (event) => {
+    const estimateTextHeight = (text, fontSize, lineHeight, maxWidth, avgCharWidthRatio = 0.52) => {
+        const safeText = String(text || '').trim();
+        if (!safeText) return 0;
+        const charsPerLine = Math.max(8, Math.floor(maxWidth / Math.max(1, fontSize * avgCharWidthRatio)));
+        const paragraphs = safeText.split(/\n+/);
+        const estimatedLines = paragraphs.reduce((sum, paragraph) => {
+            const normalized = paragraph.replace(/\s+/g, ' ').trim();
+            if (!normalized) return sum + 1;
+            return sum + Math.max(1, Math.ceil(normalized.length / charsPerLine));
+        }, 0);
+        return estimatedLines * lineHeight;
+    };
+
+    const xuChauLuotText = hasXuChauLuot ? `${item.xu_chau_luot.trim()} Chầu Mình Thánh` : '';
+    const xuChauLuotTextWidth = Math.max(150, responsiveBottomWidth - 30);
+    const estimatedXuChauLuotHeight = hasXuChauLuot
+        ? Math.max(34, Math.ceil(estimateTextHeight(xuChauLuotText, 15, 22, xuChauLuotTextWidth, 0.52))) + 24
+        : 0;
+    const reservedXuChauLuotHeight = hasXuChauLuot
+        ? Math.max(estimatedXuChauLuotHeight, xuChauLuotMeasuredHeight)
+        : 0;
+    const reservedDotsHeight = listLe.length > 1
+        ? Math.max(18, dotsMeasuredHeight)
+        : 0;
+    const baseMaxPagerHeight = Math.floor(screenHeight * (isVeryShort ? 0.54 : (isCompactHeight ? 0.6 : 0.68)));
+    const safetyReserve = hasXuChauLuot ? (isVeryShort ? 26 : 20) : 8;
+    const maxPagerHeight = Math.max(100, baseMaxPagerHeight - reservedXuChauLuotHeight - reservedDotsHeight - safetyReserve);
+
+    const estimatedPageHeights = useMemo(() => {
+        const horizontalPadding = isVerySmall ? 10 : 15;
+        const textWidth = Math.max(150, responsiveBottomWidth - horizontalPadding * 2 - 20);
+        const titleFontSize = isVerySmall ? 17 : 20;
+        const summaryFontSize = isVerySmall ? 14 : 16;
+        const quoteFontSize = isVerySmall ? 14 : 16;
+
+        return listLe.map((le, idx) => {
+            const displayBd1 = (idx === 0 && item.bd_1) ? item.bd_1 : (le.ban_van?.bd1_le_trich_tu || le.bd_1 || '');
+            const displayBd2 = (idx === 0 && item.bd_2) ? item.bd_2 : (le.ban_van?.bd2_trich_tu || le.bd_2 || '');
+            const displayTm = (idx === 0 && item.tin_mung) ? item.tin_mung : (le.ban_van?.phuc_am_trich_tu || le.tin_mung || '');
+            const summaryText = `${displayBd1}${displayBd2 ? `; ${displayBd2}` : ''}${displayTm ? `; ${displayTm}` : ''}`.trim();
+            const quoteText = le.ban_van?.cau_phuc_am_tom_gon || (le.cau_loi_chua ? `"${le.cau_loi_chua}"` : '');
+            const titleText = (le.title || '').trim();
+
+            const hasContent = Boolean(titleText || summaryText || quoteText);
+            if (!hasContent) {
+                return 0;
+            }
+
+            const titleHeight = estimateTextHeight(titleText, titleFontSize, titleFontSize * 1.25, textWidth, 0.5);
+            const summaryHeight = estimateTextHeight(summaryText, summaryFontSize, summaryFontSize * 1.35, textWidth, 0.53);
+            const quoteHeight = estimateTextHeight(quoteText, quoteFontSize, quoteFontSize * 1.45, textWidth, 0.5);
+
+            const topPad = 15;
+            const bottomPad = isVeryShort ? 20 : 30;
+            const infoBlockHeight = 78;
+            const summarySpacing = summaryHeight > 0 ? 10 : 0;
+            const quoteSpacing = quoteHeight > 0 ? (isVeryShort ? 6 : 10) : 0;
+            const spacingHeight = summarySpacing + quoteSpacing + 14;
+
+            return Math.ceil(topPad + titleHeight + infoBlockHeight + summaryHeight + quoteHeight + spacingHeight + bottomPad);
+        });
+    }, [listLe, item.bd_1, item.bd_2, item.tin_mung, responsiveBottomWidth, isVerySmall, isVeryShort]);
+
+    const adaptiveTextScale = useMemo(() => {
+        const currentEstimated = estimatedPageHeights[activeLeIndex] ?? estimatedPageHeights[0] ?? 0;
+        if (!currentEstimated || currentEstimated <= maxPagerHeight) return 1;
+        const minScale = isVeryShort ? 0.82 : 0.86;
+        return Math.max(minScale, Math.min(1, maxPagerHeight / currentEstimated));
+    }, [activeLeIndex, estimatedPageHeights, maxPagerHeight, isVeryShort]);
+
+    const scaledTitleFontSize = Math.max(14, (isVerySmall ? 17 : 20) * adaptiveTextScale);
+    const scaledSummaryFontSize = Math.max(12, (isVerySmall ? 14 : 16) * adaptiveTextScale);
+    const scaledQuoteFontSize = Math.max(12, (isVerySmall ? 14 : 16) * adaptiveTextScale);
+
+    const getPagerHeightForPage = (pageIndex, fallbackHeight) => {
+        const estimatedHeight = estimatedPageHeights[pageIndex] ?? 0;
+        const measuredHeight = pageContentHeights[pageIndex] ?? fallbackHeight;
+        const rawHeight = Math.max(estimatedHeight, measuredHeight || 0);
+        if (!rawHeight) return 0;
+        return Math.min(maxPagerHeight, rawHeight);
+    };
+
+    // Hàm đo chiều cao thực tế của từng trang trong PagerView
+    const onLayout = (pageIndex, event) => {
         const { height: layoutHeight } = event.nativeEvent.layout;
-        // Cộng thêm 40px để Lời Chúa không bị sát biên dưới PagerView
-        const extraPadding = isVeryShort ? 22 : 34;
-        const nextHeight = Math.min(maxPagerHeight, layoutHeight + extraPadding);
-        if (nextHeight !== contentHeight) {
-            setContentHeight(nextHeight);
+        if (!layoutHeight) return;
+
+        setPageContentHeights(prev => {
+            if (prev[pageIndex] === layoutHeight) return prev;
+            return { ...prev, [pageIndex]: layoutHeight };
+        });
+
+        if (pageIndex === activeLeIndex) {
+            const nextHeight = getPagerHeightForPage(pageIndex, layoutHeight);
+            if (nextHeight !== contentHeight) {
+                setContentHeight(nextHeight);
+            }
         }
     };
 
@@ -88,6 +182,13 @@ const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible }) => {
             setContentHeight(maxPagerHeight);
         }
     }, [contentHeight, maxPagerHeight]);
+
+    useEffect(() => {
+        const nextHeight = getPagerHeightForPage(activeLeIndex);
+        if (nextHeight !== contentHeight) {
+            setContentHeight(nextHeight);
+        }
+    }, [activeLeIndex, pageContentHeights, estimatedPageHeights, maxPagerHeight]);
 
     const lunarChi = ["Thân", "Dậu", "Tuất", "Hợi", "Tý", "Sửu", "Dần", "Mão", "Thìn", "Tỵ", "Ngọ", "Mùi"]
     const lunarCan = ["Canh", "Tân", "Nhâm", "Quý", "Giáp", "Ất", "Bính", "Đinh", "Mậu", "Kỷ"]
@@ -165,7 +266,7 @@ const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible }) => {
             > 
                 {/* Gán chiều cao động contentHeight vào PagerView */}
                 <PagerView
-                    style={[styles.pagerLe, { height: contentHeight }]}
+                    style={[styles.pagerLe, { height: contentHeight}]}
                     initialPage={0}
                     onPageSelected={e => setActiveLeIndex(e.nativeEvent.position)}
                 >
@@ -174,28 +275,42 @@ const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible }) => {
                         const displayBd1 = (idx === 0 && item.bd_1) ? item.bd_1 : (le.ban_van?.bd1_le_trich_tu || le.bd_1);
                         const displayBd2 = (idx === 0 && item.bd_2) ? item.bd_2 : (le.ban_van?.bd2_trich_tu || le.bd_2);
                         const displayTm = (idx === 0 && item.tin_mung) ? item.tin_mung : (le.ban_van?.phuc_am_trich_tu || le.tin_mung);
+                        const displaySummary = `${displayBd1 || ''}${displayBd2 ? `; ${displayBd2}` : ""}${displayTm ? `; ${displayTm}` : ""}`.trim();
+                        const displayQuote = le.ban_van?.cau_phuc_am_tom_gon || (le.cau_loi_chua ? `"${le.cau_loi_chua}"` : "");
+                        const isLeItemEmpty = !String(displayTitle || '').trim() && !displaySummary && !displayQuote;
+
+                        if (isLeItemEmpty) {
+                            return <View key={`le-sub-item-${idx}`} onLayout={(event) => onLayout(idx, event)} style={{ height: 0 }} />;
+                        }
 
                         return (
                             <TouchableOpacity
                                 key={`le-sub-item-${idx}`}
                                 activeOpacity={0.9}
                                 onPress={() => { setSelectedLe(le); setModalVisible(true); }}
+                                onLayout={(event) => onLayout(idx, event)}
                                 style={[styles.lePage, { paddingBottom: isVeryShort ? 20 : 30, paddingHorizontal: isVerySmall ? 10 : 15 }]}
                             >
-                                <View onLayout={onLayout}>
-                                    <Text style={[styles.titleText, { fontSize: isVerySmall ? 17 : 20 }]}>{displayTitle}</Text>
+                                <View>
+                                    {!!String(displayTitle || '').trim() && (
+                                        <Text style={[styles.titleText, { fontSize: scaledTitleFontSize, lineHeight: Math.round(scaledTitleFontSize * 1.2) }]}>{displayTitle}</Text>
+                                    )}
                                     <View style={styles.infoRow}>
                                         <Image source={renderAoLe(le.mau_ao_le)} style={styles.aoLeIcon} />
                                         <View style={styles.tag}><Text style={styles.tagText}>Lễ {le.bac_le}</Text></View>
                                     </View>
-                                    <View style={styles.summaryContainer}>
-                                        <Text style={[styles.summaryText, { fontSize: isVerySmall ? 14 : 16 }]}>
-                                            <Text style={styles.highlightText}>{displayBd1}{displayBd2 ? `; ${displayBd2}` : ""}{displayTm ? `; ${displayTm}` : ""}</Text>
+                                    {!!displaySummary && (
+                                        <View style={styles.summaryContainer}>
+                                            <Text style={[styles.summaryText, { fontSize: scaledSummaryFontSize, lineHeight: Math.round(scaledSummaryFontSize * 1.35) }]}>
+                                                <Text style={styles.highlightText}>{displaySummary}</Text>
+                                            </Text>
+                                        </View>
+                                    )}
+                                    {!!displayQuote && (
+                                        <Text style={[styles.highlightText, { marginTop: isVeryShort ? 6 : 10, fontStyle: 'italic', textAlign: 'center', fontSize: scaledQuoteFontSize, lineHeight: Math.round(scaledQuoteFontSize * 1.45) }]}>
+                                            {displayQuote}
                                         </Text>
-                                    </View>
-                                    <Text style={[styles.highlightText, { marginTop: isVeryShort ? 6 : 10, fontStyle: 'italic', textAlign: 'center', fontSize: isVerySmall ? 14 : 16 }]}>
-                                        {le.ban_van?.cau_phuc_am_tom_gon || (le.cau_loi_chua ? `"${le.cau_loi_chua}"` : "")}
-                                    </Text>
+                                    )}
                                 </View>
                             </TouchableOpacity>
                         );
@@ -203,13 +318,28 @@ const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible }) => {
                 </PagerView>
 
                 {listLe.length > 1 && (
-                    <View style={styles.dotsContainer}>{listLe.map((_, i) => (<View key={`dot-${i}`} style={[styles.dot, activeLeIndex === i ? styles.activeDot : styles.inactiveDot]} />))}</View>
+                    <View
+                        style={styles.dotsContainer}
+                        onLayout={(event) => {
+                            const h = Math.ceil(event.nativeEvent.layout.height || 0);
+                            if (h && h !== dotsMeasuredHeight) setDotsMeasuredHeight(h);
+                        }}
+                    >
+                        {listLe.map((_, i) => (<View key={`dot-${i}`} style={[styles.dot, activeLeIndex === i ? styles.activeDot : styles.inactiveDot]} />))}
+                    </View>
                 )}
 
-                {item?.xu_chau_luot && (
-                    <View style={styles.chauLuotContainer}>
+                {hasXuChauLuot && (
+                    <View
+                        style={styles.chauLuotContainer}
+                        onLayout={(event) => {
+                            const h = Math.ceil(event.nativeEvent.layout.height || 0);
+                            if (h && h !== xuChauLuotMeasuredHeight) setXuChauLuotMeasuredHeight(h);
+                        }}
+                    >
                         <Text style={styles.chauLuotText}>
                             <Image style={{ height: 30, width: 30 }} source={require('../../assets/images/monstrance_1.png')} />
+                            {' '}
                             {item.xu_chau_luot.trim()} Chầu Mình Thánh
                         </Text>
                     </View>
