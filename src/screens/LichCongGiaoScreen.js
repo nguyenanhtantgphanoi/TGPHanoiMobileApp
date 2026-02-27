@@ -12,6 +12,7 @@ import {
     Modal,
     ScrollView,
     StatusBar,
+    Platform,
     useWindowDimensions
 } from 'react-native';
 import PagerView from 'react-native-pager-view';
@@ -45,7 +46,6 @@ for (let y = 2025; y <= 2026; y++) {
 }
 
 const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible }) => {
-    const navigation = useNavigation();
     const { width: screenWidth, height: screenHeight } = useWindowDimensions();
     const dateObj = new Date(item.date);
     const daysOfWeek = ['Chúa Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
@@ -67,15 +67,14 @@ const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible }) => {
     const isCompactHeight = screenHeight < 760;
     const responsiveTopWidth = Math.min(screenWidth * (isVerySmall ? 0.98 : (isNarrow ? 0.94 : 0.9)), 460);
     const responsiveBottomWidth = Math.min(screenWidth * (isVerySmall ? 0.99 : (isNarrow ? 0.96 : 0.92)), 480);
-    const responsivePrayerWidth = Math.min(screenWidth * (isVerySmall ? 0.96 : (isNarrow ? 0.92 : 0.82)), 420);
     const dayFontSize = isVeryShort ? 54 : (isCompactHeight ? 70 : (isNarrow ? 88 : 100));
     const dayNameFontSize = isVerySmall ? 16 : (isNarrow ? 19 : 24);
     const monthYearFontSize = isVerySmall ? 12 : (isNarrow ? 14 : 18);
     const lunarFontSize = isVerySmall ? 12 : (isNarrow ? 14 : 18);
-    const prayerVertical = isVeryShort ? 7 : (isCompactHeight ? 9 : 12);
+    const fixedMiddleClearance = isVeryShort ? 74 : 86;
     const baseBottomMargin = hasXuChauLuot ? (isVeryShort ? 0 : 8) : (isVeryShort ? 2 : (isCompactHeight ? 8 : 40));
     const tabBarClearance = Math.max(12, insets.bottom + 8);
-    const bottomMargin = baseBottomMargin + tabBarClearance;
+    const bottomMargin = baseBottomMargin + tabBarClearance + fixedMiddleClearance;
 
     const estimateTextHeight = (text, fontSize, lineHeight, maxWidth, avgCharWidthRatio = 0.52) => {
         const safeText = String(text || '').trim();
@@ -199,68 +198,35 @@ const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible }) => {
                 style={[
                     styles.topBlock,
                     {
-                        marginTop: insets.top + (isVeryShort ? 2 : (isCompactHeight ? 6 : 15)),
-                        width: responsiveTopWidth,
-                        padding: isVerySmall ? 8 : (isCompactHeight ? 12 : 20),
-                        borderRadius: isVerySmall ? 18 : 24,
+                        marginTop: Platform.OS === 'android' ? 0 : insets.top + (isVeryShort ? 2 : (isCompactHeight ? 6 : 15)),
+                        
+                        
                     },
                 ]}
             >
-                <Text
-                    numberOfLines={1}
-                    style={[styles.dayNameText, { fontSize: dayNameFontSize, width: '100%', textAlign: 'center' }]}
-                >
-                    {daysOfWeek[dateObj.getDay()].toUpperCase()}
-                </Text>
-                <View style={styles.mainDateContainer}>
+                <View style={styles.topMainRow}>
                     <Text style={[styles.dayNumText, { fontSize: dayFontSize }]}>{dateObj.getDate()}</Text>
-                    <Text numberOfLines={1} style={[styles.monthYearText, { fontSize: monthYearFontSize, textAlign: 'center' }]}>
-                        THÁNG {dateObj.getMonth() + 1} NĂM {dateObj.getFullYear()}
-                    </Text>
-                </View>
-                <View style={styles.topFooter}>
-                    <Text numberOfLines={1} style={[styles.lunarDateHighlight, { fontSize: lunarFontSize, textAlign: 'center' }]}>
-                        {lunar.getDay()}/{lunar.getMonth()}/{lunarCan[lunar.getYear() % 10]} {lunarChi[lunar.getYear() % 12]}
-                    </Text>
-                </View>
+                    <View style={styles.topRightColumn}>
+                        <Text
+                            numberOfLines={1}
+                            style={[styles.dayNameText, { fontSize: dayNameFontSize }]}
+                        >
+                            {daysOfWeek[dateObj.getDay()].toUpperCase()}
+                        </Text>
+                        <Text numberOfLines={1} style={[styles.monthYearText, { fontSize: monthYearFontSize }]}>
+                            THÁNG {dateObj.getMonth() + 1} NĂM {dateObj.getFullYear()}
+                        </Text>
+                        <Text numberOfLines={1} style={[styles.lunarDateHighlight, { fontSize: lunarFontSize, textAlign: 'center' }]}>
+                            {lunar.getDay()}/{lunar.getMonth()}/{lunarCan[lunar.getYear() % 10]} {lunarChi[lunar.getYear() % 12]}
+                        </Text>
+                    </View>
+                </View>                
             </View>
-            <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={() => navigation.navigate('GKPVScreen', {
-                    day: dateObj.getDate().toString(),
-                    month: (dateObj.getMonth() + 1).toString(),
-                    year: dateObj.getFullYear().toString(),
-                })}
-                style={[styles.prayerButton, { width: responsivePrayerWidth, paddingVertical: prayerVertical, marginVertical: isCompactHeight ? 6 : 15 }]}
-            >
-                <View style={[styles.prayerButtonContent, { paddingHorizontal: isVerySmall ? 6 : 0 }]}> 
-                    <Image
-                        source={{ uri: 'https://img.icons8.com/ios-filled/50/ffffff/holy-bible.png' }}
-                        style={[styles.prayerIcon, isVerySmall && { marginRight: 6 }]}
-                    />
-                    <Text
-                        numberOfLines={1}
-                        style={[
-                            styles.prayerButtonText,
-                            {
-                                fontSize: isVerySmall ? 12 : (isNarrow ? 13 : 14),
-                                letterSpacing: isVerySmall ? 0.2 : 0.8,
-                                flexShrink: 1,
-                            },
-                        ]}
-                    >
-                        CÁC GIỜ KINH PHỤNG VỤ
-                    </Text>
-                </View>
-            </TouchableOpacity>
             <View
                 style={[
                     styles.bottomBlock,
                     {
-                        marginBottom: bottomMargin,
-                        width: responsiveBottomWidth,
-                        paddingTop: isVeryShort ? 6 : 10,
-                        minHeight: isVeryShort ? 130 : 200,
+                        
                     },
                 ]}
             > 
@@ -350,9 +316,10 @@ const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible }) => {
 });
 
 const LichCongGiaoScreen = forwardRef((props, ref) => {
+    const navigation = useNavigation();
     const pagerRef = useRef(null);
     const insets = useSafeAreaInsets();
-    const { width: contentWidth } = useWindowDimensions();
+    const { width: contentWidth, height: screenHeight } = useWindowDimensions();
     const isFocused = useIsFocused();
     const [loading, setLoading] = useState(true);
     const [loadingDay, setLoadingDay] = useState(false);
@@ -367,6 +334,7 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
     const [fullDayData, setFullDayData] = useState(null);
     const [fontScale, setFontScale] = useState(1);
     const [darkMode, setDarkMode] = useState(false);
+    const [currentDayIndex, setCurrentDayIndex] = useState(0);
 
     useImperativeHandle(ref, () => ({ goToToday: () => pagerRef.current?.setPage(initialIndex) }));
     const syncSettings = async () => {
@@ -400,6 +368,10 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
     };
 
     useEffect(() => { fetchData(); fetchYearData(); }, []);
+
+    useEffect(() => {
+        setCurrentDayIndex(initialIndex);
+    }, [initialIndex]);
 
     const handleDayPress = async (date) => {
         setClickedDate(date);
@@ -439,8 +411,14 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
         body: { color: modalColors.text, fontSize: 17 * fontScale, lineHeight: 28 * fontScale },
         p: { marginBottom: 10, color: modalColors.text, fontSize: 17 * fontScale, textAlign: "justify" },
         strong: { fontWeight: "bold", color: modalColors.text },
+        b: { fontWeight: "bold", color: modalColors.text },
         em: { fontStyle: "italic", color: modalColors.text }
     }), [fontScale, modalColors]);
+
+    const currentDay = allDays[currentDayIndex] || allDays[initialIndex] || null;
+    const currentDate = currentDay?.date ? new Date(currentDay.date) : null;
+    const fixedBottomOffset = Math.max(insets.bottom + 52, 68);
+    const middleButtonFontSize = screenHeight < 720 ? 12 : 13;
 
     if (loading) return <View style={styles.loadingContainer}><ActivityIndicator size="large" color="#007AFF" /></View>;
 
@@ -449,13 +427,57 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
             <FlingGestureHandler direction={Directions.UP} onHandlerStateChange={onFlingUp}>
                 <View style={{ flex: 1 }}>
                     <ImageBackground source={require('../../assets/images/11.jpg')} style={styles.container}>
-                        <PagerView ref={pagerRef} style={styles.mainPager} initialPage={initialIndex} offscreenPageLimit={1}>
+                        <PagerView
+                            ref={pagerRef}
+                            style={styles.mainPager}
+                            initialPage={initialIndex}
+                            offscreenPageLimit={1}
+                            onPageSelected={(e) => setCurrentDayIndex(e.nativeEvent.position)}
+                        >
                             {allDays.map((day, i) => (
                                 <View key={`${day.date}-${i}`}>
                                     <DayCard item={day} insets={insets} setSelectedLe={setSelectedLe} setModalVisible={setModalVisible} />
                                 </View>
                             ))}
                         </PagerView>
+
+                        <View style={[styles.fixedMiddleBlock, { bottom: fixedBottomOffset }]}> 
+                            <View style={[styles.middleBlock, { width: Math.min(contentWidth * 0.92, 460) }]}>
+                                <ScrollView
+                                    horizontal
+                                    showsHorizontalScrollIndicator={false}
+                                    contentContainerStyle={styles.middleScrollContent}
+                                >
+                                    <TouchableOpacity
+                                        activeOpacity={0.8}
+                                        disabled={!currentDate}
+                                        onPress={() => {
+                                            if (!currentDate) return;
+                                            navigation.navigate('GKPVScreen', {
+                                                day: currentDate.getDate().toString(),
+                                                month: (currentDate.getMonth() + 1).toString(),
+                                                year: currentDate.getFullYear().toString(),
+                                            });
+                                        }}
+                                        style={[styles.middleButton, !currentDate && { opacity: 0.6 }]}
+                                    >
+                                        <Text numberOfLines={1} style={[styles.middleButtonText, { fontSize: middleButtonFontSize }]}>CGKPV</Text>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity activeOpacity={0.8} onPress={() => {}} style={styles.middleButton}>
+                                        <Text numberOfLines={1} style={[styles.middleButtonText, { fontSize: middleButtonFontSize }]}>Suy tư tản mạn</Text>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity activeOpacity={0.8} onPress={() => {}} style={styles.middleButton}>
+                                        <Text numberOfLines={1} style={[styles.middleButtonText, { fontSize: middleButtonFontSize }]}>Giáo lý</Text>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity activeOpacity={0.8} onPress={() => {}} style={styles.middleButton}>
+                                        <Text numberOfLines={1} style={[styles.middleButtonText, { fontSize: middleButtonFontSize }]}>Hạnh các thánh</Text>
+                                    </TouchableOpacity>
+                                </ScrollView>
+                            </View>
+                        </View>
 
                         <MonthCalendarModal
                             visible={monthModalVisible}
@@ -510,7 +532,7 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
                                             )}
                                             {selectedLe.ban_van.alleluia && (
                                                 <View style={{ marginBottom: 20 }}>
-                                                    <Text style={[styles.sectionTitle, { color: modalColors.title, fontSize: 18 * fontScale }]}>Alleluia: {selectedLe.ban_van?.alleluia_trich_tu}</Text>
+                                                    <Text style={[styles.sectionTitle, { color: modalColors.title, fontSize: 18 * fontScale }]}>Tung hô tin mừng: {selectedLe.ban_van?.alleluia_trich_tu}</Text>
                                                     <RenderHTML contentWidth={contentWidth} source={{ html: selectedLe.ban_van.alleluia }} tagsStyles={tagsStyles} />
                                                 </View>
                                             )}
@@ -544,17 +566,19 @@ const styles = StyleSheet.create({
     container: { flex: 1 },
     mainPager: { flex: 1 },
     loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    page: { flex: 1, alignItems: 'center', justifyContent: 'space-between' },
-    topBlock: { width: width * 0.9, backgroundColor: 'rgba(255,255,255,0.75)', borderRadius: 24, padding: 20, alignItems: 'center' },
+    page: { flex: 1, alignItems: 'center', justifyContent: 'flex-start' },
+    topBlock: { width: '100%', backgroundColor: 'rgba(255,255,255,0.75)', padding: 20, alignItems: 'center' },
+    topMainRow: { width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+    topRightColumn: { flex: 1, justifyContent: 'center', alignItems: 'flex-start', paddingLeft: 12,backgroundColor: 'rgba(255, 255, 255, 0)', paddingVertical: 6, borderRadius: 12 },
     dayNameText: { fontSize: 24, fontWeight: '900', color: '#c0392b', fontFamily: 'System', textTransform: 'uppercase' },
     mainDateContainer: { alignItems: 'center' },
-    dayNumText: { fontSize: 100, fontWeight: '900' },
+    dayNumText: { fontSize: 100, fontWeight: '900', backgroundColor: 'rgba(255,255,255,0.8)', paddingHorizontal: 20, borderRadius: 20, },
     monthYearText: { fontSize: 18, fontWeight: '900' },
     topFooter: { paddingTop: 10 },
     lunarText: { fontSize: 18, color: "#fff" },
     lunarDateHighlight: { fontSize: 18, color: '#c0392b', fontWeight: 'bold' },
 
-    bottomBlock: { width: width * 0.92, minHeight: 200, backgroundColor: 'rgba(255,255,255,0.8)', borderRadius: 28, paddingTop: 10, flexShrink: 0 },
+    bottomBlock: { width: '100%', minHeight: 200, backgroundColor: 'rgba(250, 245, 220, 0.8)', paddingTop: 10, flexShrink: 0, borderBottomLeftRadius: 30, borderBottomRightRadius: 30, alignItems: 'center' },
     // Bỏ height cố định để ưu tiên chiều cao động từ inline style
     pagerLe: { width: '100%' },
     lePage: { padding: 15, borderRadius: 16, justifyContent: 'flex-start' },
@@ -727,6 +751,43 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: 'bold',
         letterSpacing: 0.8,
+    },
+    fixedMiddleBlock: {
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        alignItems: 'center',
+        zIndex: 20,
+    },
+    middleBlock: {
+        backgroundColor: 'rgba(255,255,255,0.8)',
+        borderRadius: 15,
+        paddingVertical: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.12,
+        shadowRadius: 3,
+        elevation: 3,
+    },
+    middleScrollContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 8,
+        gap: 8,
+    },
+    middleButton: {
+        backgroundColor: '#c0392b',
+        borderRadius: 12,
+        paddingVertical: 9,
+        paddingHorizontal: 14,
+        minWidth: 110,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    middleButtonText: {
+        color: '#fff',
+        fontSize: 14,
+        fontWeight: 'bold',
     },
 
 });

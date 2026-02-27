@@ -230,7 +230,13 @@ export default function ChiTietKinhScreen({ route, navigation }) {
             p: { fontSize: 18 * fontScale, lineHeight: 30 * fontScale, marginBottom: 10, color: colors.text, textAlign: 'justify' },
             li: { fontSize: 16 * fontScale, lineHeight: 30 * fontScale, marginBottom: 10, color: colors.text, textAlign: 'justify' },
             em: { fontStyle: "italic", color: colors.text },
+            sup: {
+                fontSize: 12 * fontScale,
+                lineHeight: 30 * fontScale,
+                color: colors.text,                
+            },
             strong: { fontWeight: "bold", color: colors.text },
+            b: { fontWeight: "bold", color: colors.text },
             hr: { borderColor: colors.title, borderBottomWidth: 5, margin: 30 },
         }),
         [fontScale, colors]
