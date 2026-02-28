@@ -30,6 +30,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import RenderHTML from "react-native-render-html";
 import { useIsFocused, useNavigation } from '@react-navigation/native';
 import MonthCalendarModal from '../components/MonthCalendarModal';
+import { Ionicons } from '@expo/vector-icons';
 
 const { width, height } = Dimensions.get('window');
 const FONT_SCALE_KEY = "@kinh_font_scale";
@@ -45,7 +46,8 @@ for (let y = 2025; y <= 2026; y++) {
     }
 }
 
-const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible }) => {
+const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible, middleBlockReservedSpace }) => {
+    const navigation = useNavigation();
     const { width: screenWidth, height: screenHeight } = useWindowDimensions();
     const dateObj = new Date(item.date);
     const daysOfWeek = ['Chúa Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
@@ -71,10 +73,7 @@ const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible }) => {
     const dayNameFontSize = isVerySmall ? 16 : (isNarrow ? 19 : 24);
     const monthYearFontSize = isVerySmall ? 12 : (isNarrow ? 14 : 18);
     const lunarFontSize = isVerySmall ? 12 : (isNarrow ? 14 : 18);
-    const fixedMiddleClearance = isVeryShort ? 74 : 86;
-    const baseBottomMargin = hasXuChauLuot ? (isVeryShort ? 0 : 8) : (isVeryShort ? 2 : (isCompactHeight ? 8 : 40));
-    const tabBarClearance = Math.max(12, insets.bottom + 8);
-    const bottomMargin = baseBottomMargin + tabBarClearance + fixedMiddleClearance;
+    const bottomMargin = Math.max(15, middleBlockReservedSpace || 0);
 
     const estimateTextHeight = (text, fontSize, lineHeight, maxWidth, avgCharWidthRatio = 0.52) => {
         const safeText = String(text || '').trim();
@@ -198,7 +197,8 @@ const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible }) => {
                 style={[
                     styles.topBlock,
                     {
-                        marginTop: Platform.OS === 'android' ? 0 : insets.top + (isVeryShort ? 2 : (isCompactHeight ? 6 : 15)),
+                        marginTop: Platform.OS === 'android' ? 15 : insets.top + (isVeryShort ? 2 : (isCompactHeight ? 6 : 15)),
+                        width: width - 30 > responsiveTopWidth ? responsiveTopWidth : width - 30,
                         
                         
                     },
@@ -220,13 +220,31 @@ const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible }) => {
                             {lunar.getDay()}/{lunar.getMonth()}/{lunarCan[lunar.getYear() % 10]} {lunarChi[lunar.getYear() % 12]}
                         </Text>
                     </View>
-                </View>                
+                </View>
+                <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={() => {
+                        const date = new Date(item.date);
+                        navigation.navigate('GKPVScreen', {
+                            day: date.getDate().toString(),
+                            month: (date.getMonth() + 1).toString(),
+                            year: date.getFullYear().toString(),
+                        });
+                    }}
+                    style={styles.cgkpvTopButton}
+                >
+                    <View style={styles.cgkpvTopButtonContent}>
+                        <Ionicons name="book-outline" size={20} color="#fff" />
+                        <Text style={styles.cgkpvTopButtonText}>CGKPV</Text>
+                    </View>
+                </TouchableOpacity>
             </View>
             <View
                 style={[
                     styles.bottomBlock,
                     {
-                        
+                        width: width - 30 > responsiveTopWidth ? responsiveTopWidth : width - 30,
+                        marginBottom: bottomMargin,
                     },
                 ]}
             > 
@@ -417,7 +435,10 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
 
     const currentDay = allDays[currentDayIndex] || allDays[initialIndex] || null;
     const currentDate = currentDay?.date ? new Date(currentDay.date) : null;
-    const fixedBottomOffset = Math.max(insets.bottom + 52, 68);
+    const [middleBlockHeight, setMiddleBlockHeight] = useState(120);
+    const middleBlockBottomOffset = Math.max(insets.bottom, 8);
+    const middleBlockReservedSpace = middleBlockBottomOffset + middleBlockHeight + 15;
+    const middleBlockMaxHeight = Math.min(Math.max(140, Math.floor(screenHeight * 0.3)), 240);
     const middleButtonFontSize = screenHeight < 720 ? 12 : 13;
 
     if (loading) return <View style={styles.loadingContainer}><ActivityIndicator size="large" color="#007AFF" /></View>;
@@ -436,44 +457,81 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
                         >
                             {allDays.map((day, i) => (
                                 <View key={`${day.date}-${i}`}>
-                                    <DayCard item={day} insets={insets} setSelectedLe={setSelectedLe} setModalVisible={setModalVisible} />
+                                    <DayCard
+                                        item={day}
+                                        insets={insets}
+                                        setSelectedLe={setSelectedLe}
+                                        setModalVisible={setModalVisible}
+                                        middleBlockReservedSpace={middleBlockReservedSpace}
+                                    />
                                 </View>
                             ))}
                         </PagerView>
 
-                        <View style={[styles.fixedMiddleBlock, { bottom: fixedBottomOffset }]}> 
-                            <View style={[styles.middleBlock, { width: Math.min(contentWidth * 0.92, 460) }]}>
+                        <View style={[styles.fixedMiddleBlock, { bottom: middleBlockBottomOffset }]}> 
+                            <View
+                                style={[styles.middleBlock, { width: Math.min(contentWidth * 0.92, 460), maxHeight: middleBlockMaxHeight }]}
+                                onLayout={(event) => {
+                                    const measuredHeight = Math.ceil(event.nativeEvent.layout.height || 0);
+                                    if (measuredHeight && measuredHeight !== middleBlockHeight) {
+                                        setMiddleBlockHeight(measuredHeight);
+                                    }
+                                }}
+                            >
+                                <Text style={styles.middleBlockTitle}>Tiện ích nhanh</Text>
                                 <ScrollView
-                                    horizontal
-                                    showsHorizontalScrollIndicator={false}
+                                    showsVerticalScrollIndicator={false}
                                     contentContainerStyle={styles.middleScrollContent}
                                 >
-                                    <TouchableOpacity
-                                        activeOpacity={0.8}
-                                        disabled={!currentDate}
-                                        onPress={() => {
-                                            if (!currentDate) return;
-                                            navigation.navigate('GKPVScreen', {
-                                                day: currentDate.getDate().toString(),
-                                                month: (currentDate.getMonth() + 1).toString(),
-                                                year: currentDate.getFullYear().toString(),
-                                            });
-                                        }}
-                                        style={[styles.middleButton, !currentDate && { opacity: 0.6 }]}
-                                    >
-                                        <Text numberOfLines={1} style={[styles.middleButtonText, { fontSize: middleButtonFontSize }]}>CGKPV</Text>
+                                    <TouchableOpacity activeOpacity={0.8} onPress={() => {}} style={styles.middleButton}>
+                                        <View style={styles.middleButtonContentInline}>
+                                            <Ionicons name="bulb-outline" size={24} color="#fff" style={styles.middleButtonIcon} />
+                                            <Text numberOfLines={1} style={[styles.middleButtonText, { fontSize: middleButtonFontSize }]}>Suy tư tản mạn</Text>
+                                        </View>
                                     </TouchableOpacity>
 
                                     <TouchableOpacity activeOpacity={0.8} onPress={() => {}} style={styles.middleButton}>
-                                        <Text numberOfLines={1} style={[styles.middleButtonText, { fontSize: middleButtonFontSize }]}>Suy tư tản mạn</Text>
+                                        <View style={styles.middleButtonContentInline}>
+                                            <Ionicons name="school-outline" size={24} color="#fff" style={styles.middleButtonIcon} />
+                                            <Text numberOfLines={1} style={[styles.middleButtonText, { fontSize: middleButtonFontSize }]}>Giáo lý</Text>
+                                        </View>
                                     </TouchableOpacity>
 
                                     <TouchableOpacity activeOpacity={0.8} onPress={() => {}} style={styles.middleButton}>
-                                        <Text numberOfLines={1} style={[styles.middleButtonText, { fontSize: middleButtonFontSize }]}>Giáo lý</Text>
+                                        <View style={styles.middleButtonContentInline}>
+                                            <Ionicons name="sparkles-outline" size={24} color="#fff" style={styles.middleButtonIcon} />
+                                            <Text numberOfLines={1} style={[styles.middleButtonText, { fontSize: middleButtonFontSize }]}>Hạnh các thánh</Text>
+                                        </View>
                                     </TouchableOpacity>
-
                                     <TouchableOpacity activeOpacity={0.8} onPress={() => {}} style={styles.middleButton}>
-                                        <Text numberOfLines={1} style={[styles.middleButtonText, { fontSize: middleButtonFontSize }]}>Hạnh các thánh</Text>
+                                        <View style={styles.middleButtonContentInline}>
+                                            <Ionicons name="sparkles-outline" size={24} color="#fff" style={styles.middleButtonIcon} />
+                                            <Text numberOfLines={1} style={[styles.middleButtonText, { fontSize: middleButtonFontSize }]}>Hạnh các thánh</Text>
+                                        </View>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity activeOpacity={0.8} onPress={() => {}} style={styles.middleButton}>
+                                        <View style={styles.middleButtonContentInline}>
+                                            <Ionicons name="sparkles-outline" size={24} color="#fff" style={styles.middleButtonIcon} />
+                                            <Text numberOfLines={1} style={[styles.middleButtonText, { fontSize: middleButtonFontSize }]}>Hạnh các thánh</Text>
+                                        </View>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity activeOpacity={0.8} onPress={() => {}} style={styles.middleButton}>
+                                        <View style={styles.middleButtonContentInline}>
+                                            <Ionicons name="sparkles-outline" size={24} color="#fff" style={styles.middleButtonIcon} />
+                                            <Text numberOfLines={1} style={[styles.middleButtonText, { fontSize: middleButtonFontSize }]}>Hạnh các thánh</Text>
+                                        </View>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity activeOpacity={0.8} onPress={() => {}} style={styles.middleButton}>
+                                        <View style={styles.middleButtonContentInline}>
+                                            <Ionicons name="sparkles-outline" size={24} color="#fff" style={styles.middleButtonIcon} />
+                                            <Text numberOfLines={1} style={[styles.middleButtonText, { fontSize: middleButtonFontSize }]}>Hạnh các thánh</Text>
+                                        </View>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity activeOpacity={0.8} onPress={() => {}} style={styles.middleButton}>
+                                        <View style={styles.middleButtonContentInline}>
+                                            <Ionicons name="sparkles-outline" size={24} color="#fff" style={styles.middleButtonIcon} />
+                                            <Text numberOfLines={1} style={[styles.middleButtonText, { fontSize: middleButtonFontSize }]}>Hạnh các thánh</Text>
+                                        </View>
                                     </TouchableOpacity>
                                 </ScrollView>
                             </View>
@@ -567,8 +625,27 @@ const styles = StyleSheet.create({
     mainPager: { flex: 1 },
     loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     page: { flex: 1, alignItems: 'center', justifyContent: 'flex-start' },
-    topBlock: { width: '100%', backgroundColor: 'rgba(255,255,255,0.75)', padding: 20, alignItems: 'center' },
+    topBlock: { width: '100%', backgroundColor: 'rgba(255,255,255,0.75)', padding: 20, alignItems: 'center', borderTopLeftRadius: 30, borderTopRightRadius: 30 },
     topMainRow: { width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+    cgkpvTopButton: {
+        marginTop: 10,
+        alignSelf: 'flex-start',
+        backgroundColor: '#c0392b',
+        borderRadius: 12,
+        paddingVertical: 8,
+        paddingHorizontal: 18,
+    },
+    cgkpvTopButtonContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+    },
+    cgkpvTopButtonText: {
+        color: '#fff',
+        fontWeight: 'bold',
+        fontSize: 13,
+    },
     topRightColumn: { flex: 1, justifyContent: 'center', alignItems: 'flex-start', paddingLeft: 12,backgroundColor: 'rgba(255, 255, 255, 0)', paddingVertical: 6, borderRadius: 12 },
     dayNameText: { fontSize: 24, fontWeight: '900', color: '#c0392b', fontFamily: 'System', textTransform: 'uppercase' },
     mainDateContainer: { alignItems: 'center' },
@@ -762,6 +839,7 @@ const styles = StyleSheet.create({
     middleBlock: {
         backgroundColor: 'rgba(255,255,255,0.8)',
         borderRadius: 15,
+        paddingTop: 10,
         paddingVertical: 8,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
@@ -769,10 +847,20 @@ const styles = StyleSheet.create({
         shadowRadius: 3,
         elevation: 3,
     },
+    middleBlockTitle: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#333',
+        textAlign: 'center',
+        marginBottom: 6,
+    },
     middleScrollContent: {
         flexDirection: 'row',
-        alignItems: 'center',
+        flexWrap: 'wrap',
+        justifyContent: 'space-between',
+        alignItems: 'stretch',
         paddingHorizontal: 8,
+        paddingBottom: 4,
         gap: 8,
     },
     middleButton: {
@@ -780,9 +868,18 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         paddingVertical: 9,
         paddingHorizontal: 14,
-        minWidth: 110,
+        width: '48%',
         alignItems: 'center',
         justifyContent: 'center',
+    },
+    middleButtonContentInline: {
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 4,
+    },
+    middleButtonIcon: {
+        marginTop: 0,
     },
     middleButtonText: {
         color: '#fff',

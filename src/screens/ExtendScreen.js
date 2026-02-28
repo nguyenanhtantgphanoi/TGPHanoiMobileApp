@@ -5,6 +5,7 @@ import {
     StyleSheet,
     FlatList,
     TouchableOpacity,
+    Platform,
 } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 
@@ -76,7 +77,7 @@ export default function ExtendScreen({ navigation }) {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        paddingTop: 60,
+        paddingTop: Platform.OS === 'android' ? 15 : 60,
         backgroundColor: '#c2850bde',
     },
     header: {
