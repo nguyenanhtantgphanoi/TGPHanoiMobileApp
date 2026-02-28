@@ -35,6 +35,33 @@ import { Ionicons } from '@expo/vector-icons';
 const { width, height } = Dimensions.get('window');
 const FONT_SCALE_KEY = "@kinh_font_scale";
 const DARK_MODE_KEY = "@kinh_dark_mode";
+const QUICK_UTILITY_API_URL = 'https://mapp.tgphanoi.org/get-quick-utilities';
+const DEFAULT_QUICK_UTILITIES = [
+    {
+        id: 'retreat-confession-schedule',
+        title: 'Lịch tĩnh tâm/giải tội',
+        icon: 'calendar-outline',
+        url: 'https://www.tonggiaophanhanoi.org/lich-tinh-tam-mua-chay-va-tuan-thanh-2026-tai-cac-nha-tho-noi-thanh-ha-noi/',
+    },
+    {
+        id: 'reflection',
+        title: 'Suy tư tản mạn',
+        icon: 'bulb-outline',
+        url: 'https://www.tonggiaophanhanoi.org/category/song-dao/suy-tu-tan-man/',
+    },
+    {
+        id: 'catechism',
+        title: 'Giáo lý',
+        icon: 'school-outline',
+        url: 'https://www.tonggiaophanhanoi.org/category/song-dao/giao-ly-cho-nguoi-truong-thanh/',
+    },
+    {
+        id: 'saints',
+        title: 'Hạnh các thánh',
+        icon: 'sparkles-outline',
+        url: 'https://www.tonggiaophanhanoi.org/category/phung-vu/hanh-cac-thanh/',
+    },
+];
 
 const GENERATED_MONTHS = [];
 for (let y = 2025; y <= 2026; y++) {
@@ -329,7 +356,7 @@ const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible, middleBloc
                     </View>
                 )}
             </View>
-        </View>
+        </ View>
     );
 });
 
@@ -353,6 +380,10 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
     const [fontScale, setFontScale] = useState(1);
     const [darkMode, setDarkMode] = useState(false);
     const [currentDayIndex, setCurrentDayIndex] = useState(0);
+    const [quickUtilities, setQuickUtilities] = useState(DEFAULT_QUICK_UTILITIES);
+    const [quickUtilityHtmlModalVisible, setQuickUtilityHtmlModalVisible] = useState(false);
+    const [quickUtilityHtmlTitle, setQuickUtilityHtmlTitle] = useState('Tiện ích');
+    const [quickUtilityHtmlContent, setQuickUtilityHtmlContent] = useState('');
 
     useImperativeHandle(ref, () => ({ goToToday: () => pagerRef.current?.setPage(initialIndex) }));
     const syncSettings = async () => {
@@ -385,7 +416,47 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
         } catch { }
     };
 
-    useEffect(() => { fetchData(); fetchYearData(); }, []);
+    const normalizeQuickUtility = (item, index) => {
+        if (!item || typeof item !== 'object') return null;
+
+        const title = String(item.title || item.name || item.label || '').trim();
+        const url = String(item.url || item.link || item.linkWeb || '').trim();
+        const html = String(item.html || item.htmlString || item.html_content || item.content || '').trim();
+
+        if (!title || (!url && !html)) return null;
+
+        return {
+            id: String(item.id || `api-quick-utility-${index}`),
+            title,
+            icon: String(item.icon || 'globe-outline').trim(),
+            url,
+            html,
+        };
+    };
+
+    const fetchQuickUtilities = async () => {
+        try {
+            const res = await axios.get(QUICK_UTILITY_API_URL);
+            const payload = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.data) ? res.data.data : []);
+            const apiButtons = payload
+                .map((item, index) => normalizeQuickUtility(item, index))
+                .filter(Boolean);
+
+            if (apiButtons.length > 0) {
+                setQuickUtilities([...DEFAULT_QUICK_UTILITIES, ...apiButtons]);
+            } else {
+                setQuickUtilities(DEFAULT_QUICK_UTILITIES);
+            }
+        } catch {
+            setQuickUtilities(DEFAULT_QUICK_UTILITIES);
+        }
+    };
+
+    useEffect(() => {
+        fetchData();
+        fetchYearData();
+        fetchQuickUtilities();
+    }, []);
 
     useEffect(() => {
         setCurrentDayIndex(initialIndex);
@@ -441,6 +512,21 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
     const middleBlockMaxHeight = Math.min(Math.max(140, Math.floor(screenHeight * 0.3)), 240);
     const middleButtonFontSize = screenHeight < 720 ? 12 : 13;
 
+    const handleOpenQuickUtility = (item) => {
+        if (!item) return;
+
+        if (item.url) {
+            navigation.navigate('GXDetailScreen', { link: item.url });
+            return;
+        }
+
+        if (item.html) {
+            setQuickUtilityHtmlTitle(item.title || 'Tiện ích');
+            setQuickUtilityHtmlContent(item.html);
+            setQuickUtilityHtmlModalVisible(true);
+        }
+    };
+
     if (loading) return <View style={styles.loadingContainer}><ActivityIndicator size="large" color="#007AFF" /></View>;
 
     return (
@@ -483,56 +569,19 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
                                     showsVerticalScrollIndicator={false}
                                     contentContainerStyle={styles.middleScrollContent}
                                 >
-                                    <TouchableOpacity activeOpacity={0.8} onPress={() => {}} style={styles.middleButton}>
-                                        <View style={styles.middleButtonContentInline}>
-                                            <Ionicons name="bulb-outline" size={24} color="#fff" style={styles.middleButtonIcon} />
-                                            <Text numberOfLines={1} style={[styles.middleButtonText, { fontSize: middleButtonFontSize }]}>Suy tư tản mạn</Text>
-                                        </View>
-                                    </TouchableOpacity>
-
-                                    <TouchableOpacity activeOpacity={0.8} onPress={() => {}} style={styles.middleButton}>
-                                        <View style={styles.middleButtonContentInline}>
-                                            <Ionicons name="school-outline" size={24} color="#fff" style={styles.middleButtonIcon} />
-                                            <Text numberOfLines={1} style={[styles.middleButtonText, { fontSize: middleButtonFontSize }]}>Giáo lý</Text>
-                                        </View>
-                                    </TouchableOpacity>
-
-                                    <TouchableOpacity activeOpacity={0.8} onPress={() => {}} style={styles.middleButton}>
-                                        <View style={styles.middleButtonContentInline}>
-                                            <Ionicons name="sparkles-outline" size={24} color="#fff" style={styles.middleButtonIcon} />
-                                            <Text numberOfLines={1} style={[styles.middleButtonText, { fontSize: middleButtonFontSize }]}>Hạnh các thánh</Text>
-                                        </View>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity activeOpacity={0.8} onPress={() => {}} style={styles.middleButton}>
-                                        <View style={styles.middleButtonContentInline}>
-                                            <Ionicons name="sparkles-outline" size={24} color="#fff" style={styles.middleButtonIcon} />
-                                            <Text numberOfLines={1} style={[styles.middleButtonText, { fontSize: middleButtonFontSize }]}>Hạnh các thánh</Text>
-                                        </View>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity activeOpacity={0.8} onPress={() => {}} style={styles.middleButton}>
-                                        <View style={styles.middleButtonContentInline}>
-                                            <Ionicons name="sparkles-outline" size={24} color="#fff" style={styles.middleButtonIcon} />
-                                            <Text numberOfLines={1} style={[styles.middleButtonText, { fontSize: middleButtonFontSize }]}>Hạnh các thánh</Text>
-                                        </View>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity activeOpacity={0.8} onPress={() => {}} style={styles.middleButton}>
-                                        <View style={styles.middleButtonContentInline}>
-                                            <Ionicons name="sparkles-outline" size={24} color="#fff" style={styles.middleButtonIcon} />
-                                            <Text numberOfLines={1} style={[styles.middleButtonText, { fontSize: middleButtonFontSize }]}>Hạnh các thánh</Text>
-                                        </View>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity activeOpacity={0.8} onPress={() => {}} style={styles.middleButton}>
-                                        <View style={styles.middleButtonContentInline}>
-                                            <Ionicons name="sparkles-outline" size={24} color="#fff" style={styles.middleButtonIcon} />
-                                            <Text numberOfLines={1} style={[styles.middleButtonText, { fontSize: middleButtonFontSize }]}>Hạnh các thánh</Text>
-                                        </View>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity activeOpacity={0.8} onPress={() => {}} style={styles.middleButton}>
-                                        <View style={styles.middleButtonContentInline}>
-                                            <Ionicons name="sparkles-outline" size={24} color="#fff" style={styles.middleButtonIcon} />
-                                            <Text numberOfLines={1} style={[styles.middleButtonText, { fontSize: middleButtonFontSize }]}>Hạnh các thánh</Text>
-                                        </View>
-                                    </TouchableOpacity>
+                                    {quickUtilities.map((utility) => (
+                                        <TouchableOpacity
+                                            key={utility.id}
+                                            activeOpacity={0.8}
+                                            onPress={() => handleOpenQuickUtility(utility)}
+                                            style={styles.middleButton}
+                                        >
+                                            <View style={styles.middleButtonContentInline}>
+                                                <Ionicons name={utility.icon} size={24} color="#fff" style={styles.middleButtonIcon} />
+                                                <Text numberOfLines={1} style={[styles.middleButtonText, { fontSize: middleButtonFontSize }]}>{utility.title}</Text>
+                                            </View>
+                                        </TouchableOpacity>
+                                    ))}
                                 </ScrollView>
                             </View>
                         </View>
@@ -610,6 +659,21 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
                                             )}
                                         </>
                                     )}
+                                </ScrollView>
+                            </View>
+                        </Modal>
+
+                        <Modal animationType="slide" visible={quickUtilityHtmlModalVisible}>
+                            <View style={[styles.modalContainer, { paddingTop: insets.top, backgroundColor: modalColors.bg }]}> 
+                                <StatusBar barStyle={darkMode ? "light-content" : "dark-content"} />
+                                <View style={[styles.controlBar, { backgroundColor: modalColors.controlBg, borderBottomColor: modalColors.border }]}> 
+                                    <Text style={[styles.sectionTitle, { color: modalColors.title, fontSize: 18 }]}>{quickUtilityHtmlTitle}</Text>
+                                    <TouchableOpacity onPress={() => setQuickUtilityHtmlModalVisible(false)} style={styles.closeButton}>
+                                        <Text numberOfLines={1} style={[styles.closeButtonText, { color: modalColors.title }]}>✕ Đóng</Text>
+                                    </TouchableOpacity>
+                                </View>
+                                <ScrollView contentContainerStyle={styles.modalScrollContent}>
+                                    <RenderHTML contentWidth={contentWidth} source={{ html: quickUtilityHtmlContent }} tagsStyles={tagsStyles} />
                                 </ScrollView>
                             </View>
                         </Modal>
