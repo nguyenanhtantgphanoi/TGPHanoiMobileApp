@@ -52,7 +52,7 @@ for (let y = 2025; y <= 2026; y++) {
     }
 }
 
-const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible, middleBlockReservedSpace, onGoToToday, onOpenMonthCalendar }) => {
+const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible, middleBlockReservedSpace, onGoToToday, onOpenMonthCalendar, onBottomBlockLayout }) => {
     const navigation = useNavigation();
     const { width: screenWidth, height: screenHeight } = useWindowDimensions();
     const dateObj = new Date(item.date);
@@ -287,6 +287,12 @@ const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible, middleBloc
                         marginBottom: bottomMargin,
                     },
                 ]}
+                onLayout={(event) => {
+                    const { y, height: blockHeight } = event.nativeEvent.layout;
+                    if (!blockHeight) return;
+                    const measuredBottom = Math.round(y + blockHeight);
+                    onBottomBlockLayout?.(measuredBottom);
+                }}
             > 
                 {/* Gán chiều cao động contentHeight vào PagerView */}
                 <PagerView
@@ -530,12 +536,15 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
     const currentDate = currentDay?.date ? new Date(currentDay.date) : null;
     const [middleBlockHeight, setMiddleBlockHeight] = useState(120);
     const [isMiddleBlockExpanded, setIsMiddleBlockExpanded] = useState(false);
+    const [dayCardBottomByIndex, setDayCardBottomByIndex] = useState({});
     const middleBlockBottomOffset = Math.max(insets.bottom, 8);
     const middleBlockReservedSpace = middleBlockBottomOffset + middleBlockHeight + 15;
+    const middleBlockGapFromDayCard = 10;
     const defaultMiddleBlockMaxHeight = Math.min(Math.max(100, Math.floor(screenHeight * 0.2)), 160);
     const expandedMiddleBlockMaxHeight = Math.max(180, Math.floor(screenHeight * 0.5));
     const middleBlockMaxHeight = isMiddleBlockExpanded ? expandedMiddleBlockMaxHeight : defaultMiddleBlockMaxHeight;
     const middleBlockAnimatedHeight = useRef(new Animated.Value(defaultMiddleBlockMaxHeight)).current;
+    const middleBlockAnimatedShiftY = useRef(new Animated.Value(0)).current;
     const middleButtonFontSize = screenHeight < 720 ? 12 : 13;
 
     useEffect(() => {
@@ -551,6 +560,37 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
         defaultMiddleBlockMaxHeight,
         expandedMiddleBlockMaxHeight,
         middleBlockAnimatedHeight,
+    ]);
+
+    useEffect(() => {
+        const currentDayBottom = dayCardBottomByIndex[currentDayIndex];
+        if (!currentDayBottom || !middleBlockHeight) {
+            Animated.timing(middleBlockAnimatedShiftY, {
+                toValue: 0,
+                duration: 200,
+                easing: Easing.out(Easing.quad),
+                useNativeDriver: false,
+            }).start();
+            return;
+        }
+
+        const middleBlockTopAtDefault = screenHeight - middleBlockBottomOffset - middleBlockHeight;
+        const overlapAmount = currentDayBottom + middleBlockGapFromDayCard - middleBlockTopAtDefault;
+        const targetShift = overlapAmount > 0 ? overlapAmount : 0;
+
+        Animated.timing(middleBlockAnimatedShiftY, {
+            toValue: targetShift,
+            duration: 220,
+            easing: Easing.out(Easing.quad),
+            useNativeDriver: false,
+        }).start();
+    }, [
+        currentDayIndex,
+        dayCardBottomByIndex,
+        middleBlockHeight,
+        screenHeight,
+        middleBlockBottomOffset,
+        middleBlockAnimatedShiftY,
     ]);
 
     const handleOpenQuickUtility = (item) => {
@@ -593,6 +633,15 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
                                         setSelectedLe={setSelectedLe}
                                         setModalVisible={setModalVisible}
                                         middleBlockReservedSpace={middleBlockReservedSpace}
+                                        onBottomBlockLayout={(bottomY) => {
+                                            setDayCardBottomByIndex(prev => {
+                                                const previousBottom = prev[i];
+                                                if (typeof previousBottom === 'number' && Math.abs(previousBottom - bottomY) < 1) {
+                                                    return prev;
+                                                }
+                                                return { ...prev, [i]: bottomY };
+                                            });
+                                        }}
                                         onGoToToday={() => {
                                             pagerRef.current?.setPage(initialIndex);
                                             setCurrentDayIndex(initialIndex);
@@ -613,7 +662,15 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
 
                         <View style={[styles.fixedMiddleBlock, { bottom: middleBlockBottomOffset, height: expandedMiddleBlockMaxHeight }]}> 
                             <Animated.View
-                                style={[styles.middleBlock, { width: Math.min(contentWidth * 0.92, 460), height: middleBlockAnimatedHeight, maxHeight: middleBlockMaxHeight }]}
+                                style={[
+                                    styles.middleBlock,
+                                    {
+                                        width: Math.min(contentWidth * 0.92, 460),
+                                        height: middleBlockAnimatedHeight,
+                                        maxHeight: middleBlockMaxHeight,
+                                        transform: [{ translateY: middleBlockAnimatedShiftY }],
+                                    },
+                                ]}
                                 onLayout={(event) => {
                                     const measuredHeight = Math.ceil(event.nativeEvent.layout.height || 0);
                                     if (measuredHeight && measuredHeight !== middleBlockHeight) {
