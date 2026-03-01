@@ -13,7 +13,9 @@ import {
     ScrollView,
     StatusBar,
     Platform,
-    useWindowDimensions
+    useWindowDimensions,
+    Animated,
+    Easing,
 } from 'react-native';
 import PagerView from 'react-native-pager-view';
 import axios from 'axios';
@@ -37,30 +39,7 @@ const FONT_SCALE_KEY = "@kinh_font_scale";
 const DARK_MODE_KEY = "@kinh_dark_mode";
 const QUICK_UTILITY_API_URL = 'https://mapp.tgphanoi.org/get-quick-utilities';
 const DEFAULT_QUICK_UTILITIES = [
-    {
-        id: 'retreat-confession-schedule',
-        title: 'Lịch tĩnh tâm/giải tội',
-        icon: 'calendar-outline',
-        url: 'https://www.tonggiaophanhanoi.org/lich-tinh-tam-mua-chay-va-tuan-thanh-2026-tai-cac-nha-tho-noi-thanh-ha-noi/',
-    },
-    {
-        id: 'reflection',
-        title: 'Suy tư tản mạn',
-        icon: 'bulb-outline',
-        url: 'https://www.tonggiaophanhanoi.org/category/song-dao/suy-tu-tan-man/',
-    },
-    {
-        id: 'catechism',
-        title: 'Giáo lý',
-        icon: 'school-outline',
-        url: 'https://www.tonggiaophanhanoi.org/category/song-dao/giao-ly-cho-nguoi-truong-thanh/',
-    },
-    {
-        id: 'saints',
-        title: 'Hạnh các thánh',
-        icon: 'sparkles-outline',
-        url: 'https://www.tonggiaophanhanoi.org/category/phung-vu/hanh-cac-thanh/',
-    },
+    
 ];
 
 const GENERATED_MONTHS = [];
@@ -73,7 +52,7 @@ for (let y = 2025; y <= 2026; y++) {
     }
 }
 
-const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible, middleBlockReservedSpace }) => {
+const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible, middleBlockReservedSpace, onGoToToday, onOpenMonthCalendar }) => {
     const navigation = useNavigation();
     const { width: screenWidth, height: screenHeight } = useWindowDimensions();
     const dateObj = new Date(item.date);
@@ -100,6 +79,14 @@ const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible, middleBloc
     const dayNameFontSize = isVerySmall ? 16 : (isNarrow ? 19 : 24);
     const monthYearFontSize = isVerySmall ? 12 : (isNarrow ? 14 : 18);
     const lunarFontSize = isVerySmall ? 12 : (isNarrow ? 14 : 18);
+    const isDoubleDigitDay = dateObj.getDate() > 9;
+    const topRowScale = isDoubleDigitDay
+        ? (isVerySmall ? 0.62 : (isNarrow ? 0.7 : (isCompactHeight ? 0.76 : 0.8)))
+        : 1;
+    const adjustedDayFontSize = Math.max(42, Math.round(dayFontSize * topRowScale));
+    const adjustedDayNameFontSize = Math.max(14, Math.round(dayNameFontSize * topRowScale));
+    const adjustedMonthYearFontSize = Math.max(11, Math.round(monthYearFontSize * topRowScale));
+    const adjustedLunarFontSize = Math.max(11, Math.round(lunarFontSize * topRowScale));
     const bottomMargin = Math.max(15, middleBlockReservedSpace || 0);
 
     const estimateTextHeight = (text, fontSize, lineHeight, maxWidth, avgCharWidthRatio = 0.52) => {
@@ -232,39 +219,65 @@ const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible, middleBloc
                 ]}
             >
                 <View style={styles.topMainRow}>
-                    <Text style={[styles.dayNumText, { fontSize: dayFontSize }]}>{dateObj.getDate()}</Text>
+                    <Text style={[styles.dayNumText, { fontSize: adjustedDayFontSize }]}>{dateObj.getDate()}</Text>
                     <View style={styles.topRightColumn}>
                         <Text
                             numberOfLines={1}
-                            style={[styles.dayNameText, { fontSize: dayNameFontSize }]}
+                            style={[styles.dayNameText, { fontSize: adjustedDayNameFontSize }]}
                         >
                             {daysOfWeek[dateObj.getDay()].toUpperCase()}
                         </Text>
-                        <Text numberOfLines={1} style={[styles.monthYearText, { fontSize: monthYearFontSize }]}>
+                        <Text numberOfLines={1} style={[styles.monthYearText, { fontSize: adjustedMonthYearFontSize }]}>
                             THÁNG {dateObj.getMonth() + 1} NĂM {dateObj.getFullYear()}
                         </Text>
-                        <Text numberOfLines={1} style={[styles.lunarDateHighlight, { fontSize: lunarFontSize, textAlign: 'center' }]}>
+                        <Text numberOfLines={1} style={[styles.lunarDateHighlight, { fontSize: adjustedLunarFontSize, textAlign: 'center' }]}>
                             {lunar.getDay()}/{lunar.getMonth()}/{lunarCan[lunar.getYear() % 10]} {lunarChi[lunar.getYear() % 12]}
                         </Text>
                     </View>
                 </View>
-                <TouchableOpacity
-                    activeOpacity={0.8}
-                    onPress={() => {
-                        const date = new Date(item.date);
-                        navigation.navigate('GKPVScreen', {
-                            day: date.getDate().toString(),
-                            month: (date.getMonth() + 1).toString(),
-                            year: date.getFullYear().toString(),
-                        });
-                    }}
-                    style={styles.cgkpvTopButton}
-                >
-                    <View style={styles.cgkpvTopButtonContent}>
-                        <Ionicons name="book-outline" size={20} color="#fff" />
-                        <Text style={styles.cgkpvTopButtonText}>CGKPV</Text>
-                    </View>
-                </TouchableOpacity>
+                <View style={styles.topActionRow}>
+                    <TouchableOpacity
+                        activeOpacity={0.8}
+                        onPress={() => {
+                            const date = new Date(item.date);
+                            navigation.navigate('GKPVScreen', {
+                                day: date.getDate().toString(),
+                                month: (date.getMonth() + 1).toString(),
+                                year: date.getFullYear().toString(),
+                            });
+                        }}
+                        style={styles.cgkpvTopButton}
+                    >
+                        <View style={styles.cgkpvTopButtonContent}>
+                            <Ionicons name="book-outline" size={20} color="#fff" />
+                            <Text numberOfLines={1} style={styles.cgkpvTopButtonText}>CGKPV</Text>
+                        </View>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        activeOpacity={0.8}
+                        onPress={() => {
+                            const date = new Date(item.date);
+                            onOpenMonthCalendar?.(date);
+                        }}
+                        style={styles.monthTopButton}
+                    >
+                        <View style={styles.cgkpvTopButtonContent}>
+                            <Ionicons name="calendar-clear-outline" size={20} color="#fff" />
+                            <Text numberOfLines={1} style={styles.cgkpvTopButtonText}>Lịch Tháng</Text>
+                        </View>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        activeOpacity={0.8}
+                        onPress={onGoToToday}
+                        style={styles.todayTopButton}
+                    >
+                        <View style={styles.cgkpvTopButtonContent}>
+                            <Text numberOfLines={1} style={styles.cgkpvTopButtonText}>Hôm nay</Text>
+                        </View>
+                    </TouchableOpacity>
+                </View>
             </View>
             <View
                 style={[
@@ -422,6 +435,14 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
         const title = String(item.title || item.name || item.label || '').trim();
         const url = String(item.url || item.link || item.linkWeb || '').trim();
         const html = String(item.html || item.htmlString || item.html_content || item.content || '').trim();
+        const iconBackgroundColor = String(
+            item.iconBackgroundColor ||
+            item.icon_background_color ||
+            item.backgroundColor ||
+            item.background_color ||
+            item.bgColor ||
+            ''
+        ).trim();
 
         if (!title || (!url && !html)) return null;
 
@@ -431,6 +452,7 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
             icon: String(item.icon || 'globe-outline').trim(),
             url,
             html,
+            iconBackgroundColor,
         };
     };
 
@@ -507,10 +529,29 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
     const currentDay = allDays[currentDayIndex] || allDays[initialIndex] || null;
     const currentDate = currentDay?.date ? new Date(currentDay.date) : null;
     const [middleBlockHeight, setMiddleBlockHeight] = useState(120);
+    const [isMiddleBlockExpanded, setIsMiddleBlockExpanded] = useState(false);
     const middleBlockBottomOffset = Math.max(insets.bottom, 8);
     const middleBlockReservedSpace = middleBlockBottomOffset + middleBlockHeight + 15;
-    const middleBlockMaxHeight = Math.min(Math.max(140, Math.floor(screenHeight * 0.3)), 240);
+    const defaultMiddleBlockMaxHeight = Math.min(Math.max(100, Math.floor(screenHeight * 0.2)), 160);
+    const expandedMiddleBlockMaxHeight = Math.max(180, Math.floor(screenHeight * 0.5));
+    const middleBlockMaxHeight = isMiddleBlockExpanded ? expandedMiddleBlockMaxHeight : defaultMiddleBlockMaxHeight;
+    const middleBlockAnimatedHeight = useRef(new Animated.Value(defaultMiddleBlockMaxHeight)).current;
     const middleButtonFontSize = screenHeight < 720 ? 12 : 13;
+
+    useEffect(() => {
+        const targetHeight = isMiddleBlockExpanded ? expandedMiddleBlockMaxHeight : defaultMiddleBlockMaxHeight;
+        Animated.timing(middleBlockAnimatedHeight, {
+            toValue: targetHeight,
+            duration: 260,
+            easing: Easing.out(Easing.quad),
+            useNativeDriver: false,
+        }).start();
+    }, [
+        isMiddleBlockExpanded,
+        defaultMiddleBlockMaxHeight,
+        expandedMiddleBlockMaxHeight,
+        middleBlockAnimatedHeight,
+    ]);
 
     const handleOpenQuickUtility = (item) => {
         if (!item) return;
@@ -539,7 +580,10 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
                             style={styles.mainPager}
                             initialPage={initialIndex}
                             offscreenPageLimit={1}
-                            onPageSelected={(e) => setCurrentDayIndex(e.nativeEvent.position)}
+                            onPageSelected={(e) => {
+                                setCurrentDayIndex(e.nativeEvent.position);
+                                setIsMiddleBlockExpanded(false);
+                            }}
                         >
                             {allDays.map((day, i) => (
                                 <View key={`${day.date}-${i}`}>
@@ -549,14 +593,27 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
                                         setSelectedLe={setSelectedLe}
                                         setModalVisible={setModalVisible}
                                         middleBlockReservedSpace={middleBlockReservedSpace}
+                                        onGoToToday={() => {
+                                            pagerRef.current?.setPage(initialIndex);
+                                            setCurrentDayIndex(initialIndex);
+                                        }}
+                                        onOpenMonthCalendar={(date) => {
+                                            const targetDate = date instanceof Date ? date : new Date();
+                                            const idx = GENERATED_MONTHS.findIndex(
+                                                m => m.month === targetDate.getMonth() && m.year === targetDate.getFullYear()
+                                            );
+                                            setMonthPagerIndex(idx !== -1 ? idx : 0);
+                                            handleDayPress(targetDate);
+                                            setMonthModalVisible(true);
+                                        }}
                                     />
                                 </View>
                             ))}
                         </PagerView>
 
-                        <View style={[styles.fixedMiddleBlock, { bottom: middleBlockBottomOffset }]}> 
-                            <View
-                                style={[styles.middleBlock, { width: Math.min(contentWidth * 0.92, 460), maxHeight: middleBlockMaxHeight }]}
+                        <View style={[styles.fixedMiddleBlock, { bottom: middleBlockBottomOffset, height: expandedMiddleBlockMaxHeight }]}> 
+                            <Animated.View
+                                style={[styles.middleBlock, { width: Math.min(contentWidth * 0.92, 460), height: middleBlockAnimatedHeight, maxHeight: middleBlockMaxHeight }]}
                                 onLayout={(event) => {
                                     const measuredHeight = Math.ceil(event.nativeEvent.layout.height || 0);
                                     if (measuredHeight && measuredHeight !== middleBlockHeight) {
@@ -564,7 +621,20 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
                                     }
                                 }}
                             >
-                                <Text style={styles.middleBlockTitle}>Tiện ích nhanh</Text>
+                                <View style={styles.middleBlockHeader}>
+                                    <Text style={styles.middleBlockTitle}>Tiện ích</Text>
+                                    <TouchableOpacity
+                                        activeOpacity={0.8}
+                                        style={styles.middleBlockDragButton}
+                                        onPress={() => setIsMiddleBlockExpanded(prev => !prev)}
+                                    >
+                                        <Ionicons
+                                            name={isMiddleBlockExpanded ? "chevron-down-outline" : "chevron-up-outline"}
+                                            size={18}
+                                            color="#555"
+                                        />
+                                    </TouchableOpacity>
+                                </View>
                                 <ScrollView
                                     showsVerticalScrollIndicator={false}
                                     contentContainerStyle={styles.middleScrollContent}
@@ -577,13 +647,20 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
                                             style={styles.middleButton}
                                         >
                                             <View style={styles.middleButtonContentInline}>
-                                                <Ionicons name={utility.icon} size={24} color="#fff" style={styles.middleButtonIcon} />
+                                                <View
+                                                    style={[
+                                                        styles.middleButtonIconSquare,
+                                                        utility.iconBackgroundColor ? { backgroundColor: utility.iconBackgroundColor } : null,
+                                                    ]}
+                                                >
+                                                    <Ionicons name={utility.icon} size={20} color="#fff" style={styles.middleButtonIcon} />
+                                                </View>
                                                 <Text numberOfLines={1} style={[styles.middleButtonText, { fontSize: middleButtonFontSize }]}>{utility.title}</Text>
                                             </View>
                                         </TouchableOpacity>
                                     ))}
                                 </ScrollView>
-                            </View>
+                            </Animated.View>
                         </View>
 
                         <MonthCalendarModal
@@ -691,19 +768,45 @@ const styles = StyleSheet.create({
     page: { flex: 1, alignItems: 'center', justifyContent: 'flex-start' },
     topBlock: { width: '100%', backgroundColor: 'rgba(255,255,255,0.75)', padding: 20, alignItems: 'center', borderTopLeftRadius: 30, borderTopRightRadius: 30 },
     topMainRow: { width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
-    cgkpvTopButton: {
+    topActionRow: {
         marginTop: 10,
-        alignSelf: 'flex-start',
+        alignSelf: 'stretch',
+        width: '100%',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        columnGap: 6,
+    },
+    todayTopButton: {
+        backgroundColor: '#2980b9',
+        borderRadius: 12,
+        paddingVertical: 8,
+        paddingHorizontal: 10,
+        flex: 1,
+        minWidth: 0,
+    },
+    cgkpvTopButton: {
         backgroundColor: '#c0392b',
         borderRadius: 12,
         paddingVertical: 8,
-        paddingHorizontal: 18,
+        paddingHorizontal: 10,
+        flex: 1,
+        minWidth: 0,
+    },
+    monthTopButton: {
+        backgroundColor: '#7f8c8d',
+        borderRadius: 12,
+        paddingVertical: 8,
+        paddingHorizontal: 10,
+        flex: 1,
+        minWidth: 0,
     },
     cgkpvTopButtonContent: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 8,
+        gap: 6,
+        minWidth: 0,
     },
     cgkpvTopButtonText: {
         color: '#fff',
@@ -898,25 +1001,42 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         alignItems: 'center',
+        justifyContent: 'flex-end',
         zIndex: 20,
     },
     middleBlock: {
-        backgroundColor: 'rgba(255,255,255,0.8)',
+        backgroundColor: 'rgb(255, 255, 255)',
         borderRadius: 15,
         paddingTop: 10,
+        paddingHorizontal: 8,
         paddingVertical: 8,
+        overflow: 'hidden',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.12,
         shadowRadius: 3,
         elevation: 3,
     },
+    middleBlockHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 4,
+        marginBottom: 6,
+    },
     middleBlockTitle: {
         fontSize: 14,
         fontWeight: '700',
         color: '#333',
-        textAlign: 'center',
-        marginBottom: 6,
+        textAlign: 'left',
+    },
+    middleBlockDragButton: {
+        width: 26,
+        height: 26,
+        borderRadius: 13,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'rgba(0,0,0,0.06)',
     },
     middleScrollContent: {
         flexDirection: 'row',
@@ -928,7 +1048,7 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     middleButton: {
-        backgroundColor: '#c0392b',
+        
         borderRadius: 12,
         paddingVertical: 9,
         paddingHorizontal: 14,
@@ -942,11 +1062,22 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         gap: 4,
     },
+    middleButtonIconSquare: {
+        width: 50,
+        height: 50,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.7)',
+        backgroundColor: 'rgba(161, 16, 16, 0.77)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 2,
+    },
     middleButtonIcon: {
         marginTop: 0,
     },
     middleButtonText: {
-        color: '#fff',
+        color: '#053c8d',
         fontSize: 14,
         fontWeight: 'bold',
     },
