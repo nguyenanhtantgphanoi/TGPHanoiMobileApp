@@ -1,4 +1,4 @@
-import { StyleSheet } from 'react-native'
+import { Platform, StyleSheet } from 'react-native'
 import React, { useRef } from 'react'
 import NewsScreen from '../screens/NewsScreen';
 import KinhNguyenScreen from '../screens/KinhNguyenScreen';
@@ -23,9 +23,19 @@ export default function HomeBottomTabNavigator() {
                 tabBarInactiveTintColor: '#8e8e93',
                 tabBarStyle: {
                     backgroundColor: '#f9f9f9',
-                    height: 50 + insets.bottom,
-                    paddingBottom: 6 + insets.bottom,
+                    height: 56,
+                    paddingBottom: 6,
                     paddingTop: 8,
+                    position: Platform.OS === 'android' ? 'absolute' : 'relative',
+                    left: 0,
+                    right: 0,
+                    top: Platform.OS === 'android' ? insets.top : undefined,
+                    bottom: Platform.OS === 'android' ? undefined : 0,
+                    zIndex: 10,
+                    elevation: 10,
+                },
+                sceneStyle: {
+                    paddingTop: Platform.OS === 'android' ? (56 + insets.top) : 0,
                 },
                 tabBarIcon: ({ color }) => {
                     let iconName;

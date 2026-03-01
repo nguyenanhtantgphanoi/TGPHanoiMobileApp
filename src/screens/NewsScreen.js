@@ -11,7 +11,8 @@ import {
     Dimensions,
     StatusBar,
     Animated,
-    Alert
+    Alert,
+    Platform
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -254,14 +255,14 @@ export default function NewsScreen({ navigation }) {
 
     if (loading && page === 1) {
         return (
-            <View style={[styles.container, { paddingTop: insets.top, justifyContent: 'center', alignItems: 'center' }]}>
+            <View style={[styles.container, { paddingTop: Platform.OS === 'android' ? 0 : insets.top, justifyContent: 'center', alignItems: 'center' }]}>
                 <ActivityIndicator size="large" color="#1e90ff" />
             </View>
         );
     }
 
     return (
-        <View style={[styles.container, { paddingTop: insets.top }]}>
+        <View style={[styles.container, { paddingTop: Platform.OS === 'android' ? 0 : insets.top }]}>
             <StatusBar barStyle="dark-content" backgroundColor="#fff" />
             <View style={styles.fixedHeader}>
                 {/* <Text style={styles.headerTitle}>Tin Tức TGP Hà Nội</Text> */}

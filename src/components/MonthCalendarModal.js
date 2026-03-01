@@ -514,6 +514,7 @@ const MonthCalendarModal = ({
 
             },
             strong: { fontWeight: "bold", color: modalColors.text },
+            b: { fontWeight: "bold", color: modalColors.text },
             em: { fontStyle: "italic", color: modalColors.text },
         }),
         [fontScale, modalColors],
@@ -792,6 +793,16 @@ const MonthCalendarModal = ({
                         <ScrollView contentContainerStyle={{ padding: 20 }}>
                             {selectedLe?.ban_van ? (
                                 <>
+                                    {selectedLe.title && (
+                                        <>
+                                            <Text
+                                                style={[styles.secTitle, { textAlign: "center", fontSize: 22 * fontScale, color: modalColors.title }]}
+                                            >
+                                               {selectedLe.title}
+                                            </Text>
+                                            
+                                        </>
+                                    )}
                                     {selectedLe.ban_van.bd1_le && (
                                         <>
                                             <Text
@@ -834,6 +845,20 @@ const MonthCalendarModal = ({
                                             />
                                         </>
                                     )}
+                                    {selectedLe.ban_van?.alleluia && (
+                                        <>
+                                            <Text
+                                                style={[styles.secTitle, { color: modalColors.title }]}
+                                            >
+                                                Tung hô tin mừng: {selectedLe.ban_van?.alleluia_trich_tu}
+                                            </Text>
+                                            <RenderHTML
+                                                contentWidth={contentWidth}
+                                                source={{ html: selectedLe.ban_van?.alleluia }}
+                                                tagsStyles={tagsStyles}
+                                            />
+                                        </>
+                                    )}
                                     {selectedLe.ban_van?.phuc_am && (
                                         <>
                                             <Text
@@ -844,6 +869,22 @@ const MonthCalendarModal = ({
                                             <RenderHTML
                                                 contentWidth={contentWidth}
                                                 source={{ html: selectedLe.ban_van?.phuc_am }}
+                                                tagsStyles={tagsStyles}
+                                            />
+                                        </>
+                                    )}
+                                    {selectedLe.articles && (
+                                        <>
+                                            <Text
+                                                style={[styles.secTitle, { color: modalColors.title }]}
+                                            >
+                                                Suy niệm:
+                                            </Text>
+                                            <Text style={[styles.secTitle, { color: modalColors.titleText, fontSize: 18 * fontScale, textAlign: 'center' }]}>{selectedLe.articles[0]?.title}</Text>
+                                            <Text style={[styles.secTitle, { fontSize: 18 * fontScale, textAlign: 'center', fontStyle: 'italic', fontWeight: 'regular' }]}>{selectedLe.articles[0]?.author}</Text>
+                                            <RenderHTML
+                                                contentWidth={contentWidth}
+                                                source={{ html: selectedLe.articles[0]?.content }}
                                                 tagsStyles={tagsStyles}
                                             />
                                         </>
@@ -1067,7 +1108,7 @@ const styles = StyleSheet.create({
     secTitle: {
         fontWeight: "bold",
         fontSize: 18,
-        marginTop: 20,
+        
         marginBottom: 5,
     },
     modalOverlay: {
