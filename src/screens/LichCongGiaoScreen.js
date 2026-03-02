@@ -14,8 +14,6 @@ import {
     StatusBar,
     Platform,
     useWindowDimensions,
-    Animated,
-    Easing,
 } from 'react-native';
 import PagerView from 'react-native-pager-view';
 import axios from 'axios';
@@ -142,7 +140,7 @@ const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible, middleBloc
             const quoteHeight = estimateTextHeight(quoteText, quoteFontSize, quoteFontSize * 1.45, textWidth, 0.5);
 
             const topPad = 15;
-            const bottomPad = isVeryShort ? 20 : 30;
+            const bottomPad = isVeryShort ? 12 : 18;
             const infoBlockHeight = 78;
             const summarySpacing = summaryHeight > 0 ? 10 : 0;
             const quoteSpacing = quoteHeight > 0 ? (isVeryShort ? 6 : 10) : 0;
@@ -264,7 +262,7 @@ const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible, middleBloc
                     >
                         <View style={styles.cgkpvTopButtonContent}>
                             <Ionicons name="calendar-clear-outline" size={20} color="#fff" />
-                            <Text numberOfLines={1} style={styles.cgkpvTopButtonText}>Lịch Tháng</Text>
+                            <Text numberOfLines={1} style={styles.cgkpvTopButtonText}>Lịch</Text>
                         </View>
                     </TouchableOpacity>
 
@@ -313,9 +311,9 @@ const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible, middleBloc
                                 activeOpacity={0.9}
                                 onPress={() => { setSelectedLe(le); setModalVisible(true); }}
                                 onLayout={(event) => onLayout(idx, event)}
-                                style={[styles.lePage, { paddingBottom: isVeryShort ? 20 : 30, paddingHorizontal: isVerySmall ? 10 : 15 }]}
+                                style={[styles.lePage, { paddingBottom: isVeryShort ? 2 : 6, paddingHorizontal: isVerySmall ? 10 : 15 }]}
                             >
-                                <View>
+                                <View> 
                                     {!!String(displayTitle || '').trim() && (
                                         <Text style={[styles.titleText, { fontSize: scaledTitleFontSize, lineHeight: Math.round(scaledTitleFontSize * 1.2) }]}>{displayTitle}</Text>
                                     )}
@@ -530,28 +528,12 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
     const currentDate = currentDay?.date ? new Date(currentDay.date) : null;
     const [middleBlockHeight, setMiddleBlockHeight] = useState(120);
     const [isMiddleBlockExpanded, setIsMiddleBlockExpanded] = useState(false);
-    const middleBlockBottomOffset = Math.max(insets.bottom, 8);
+    const middleBlockBottomOffset = Platform.OS === 'ios' ? 8 : Math.max(insets.bottom, 4);
     const middleBlockReservedSpace = middleBlockBottomOffset + middleBlockHeight + 15;
-    const defaultMiddleBlockMaxHeight = Math.min(Math.max(100, Math.floor(screenHeight * 0.2)), 160);
+    const defaultMiddleBlockMaxHeight = Math.min(Math.max(100, Math.floor(screenHeight * 0.18)), 160);
     const expandedMiddleBlockMaxHeight = Math.max(180, Math.floor(screenHeight * 0.5));
     const middleBlockMaxHeight = isMiddleBlockExpanded ? expandedMiddleBlockMaxHeight : defaultMiddleBlockMaxHeight;
-    const middleBlockAnimatedHeight = useRef(new Animated.Value(defaultMiddleBlockMaxHeight)).current;
     const middleButtonFontSize = screenHeight < 720 ? 12 : 13;
-
-    useEffect(() => {
-        const targetHeight = isMiddleBlockExpanded ? expandedMiddleBlockMaxHeight : defaultMiddleBlockMaxHeight;
-        Animated.timing(middleBlockAnimatedHeight, {
-            toValue: targetHeight,
-            duration: 260,
-            easing: Easing.out(Easing.quad),
-            useNativeDriver: false,
-        }).start();
-    }, [
-        isMiddleBlockExpanded,
-        defaultMiddleBlockMaxHeight,
-        expandedMiddleBlockMaxHeight,
-        middleBlockAnimatedHeight,
-    ]);
 
     const handleOpenQuickUtility = (item) => {
         if (!item) return;
@@ -611,56 +593,65 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
                             ))}
                         </PagerView>
 
-                        <View style={[styles.fixedMiddleBlock, { bottom: middleBlockBottomOffset, height: expandedMiddleBlockMaxHeight }]}> 
-                            <Animated.View
-                                style={[styles.middleBlock, { width: Math.min(contentWidth * 0.92, 460), height: middleBlockAnimatedHeight, maxHeight: middleBlockMaxHeight }]}
-                                onLayout={(event) => {
-                                    const measuredHeight = Math.ceil(event.nativeEvent.layout.height || 0);
-                                    if (measuredHeight && measuredHeight !== middleBlockHeight) {
-                                        setMiddleBlockHeight(measuredHeight);
-                                    }
-                                }}
-                            >
-                                <View style={styles.middleBlockHeader}>
-                                    <Text style={styles.middleBlockTitle}>Tiện ích</Text>
-                                    <TouchableOpacity
-                                        activeOpacity={0.8}
-                                        style={styles.middleBlockDragButton}
-                                        onPress={() => setIsMiddleBlockExpanded(prev => !prev)}
-                                    >
-                                        <Ionicons
-                                            name={isMiddleBlockExpanded ? "chevron-down-outline" : "chevron-up-outline"}
-                                            size={18}
-                                            color="#555"
-                                        />
-                                    </TouchableOpacity>
-                                </View>
-                                <ScrollView
-                                    showsVerticalScrollIndicator={false}
-                                    contentContainerStyle={styles.middleScrollContent}
+                        <View
+                            style={[
+                                {
+                                    position: 'absolute',
+                                    alignSelf: 'center',
+                                    alignItems: 'center',
+                                    justifyContent: 'flex-end',
+                                    zIndex: 20,
+                                    bottom: middleBlockBottomOffset,
+                                },
+                                styles.middleBlock,
+                                { width: Math.min(contentWidth * 0.92, 460), height: middleBlockMaxHeight, maxHeight: middleBlockMaxHeight }
+                            ]}
+                            onLayout={(event) => {
+                                const measuredHeight = Math.ceil(event.nativeEvent.layout.height || 0);
+                                if (measuredHeight && measuredHeight !== middleBlockHeight) {
+                                    setMiddleBlockHeight(measuredHeight);
+                                }
+                            }}
+                        >
+                            <View style={styles.middleBlockHeader}>
+                                <Text style={styles.middleBlockTitle}>Tiện ích </Text>
+                                <TouchableOpacity
+                                    activeOpacity={0.8}
+                                    style={styles.middleBlockDragButton}
+                                    onPress={() => setIsMiddleBlockExpanded(prev => !prev)}
                                 >
-                                    {quickUtilities.map((utility) => (
-                                        <TouchableOpacity
-                                            key={utility.id}
-                                            activeOpacity={0.8}
-                                            onPress={() => handleOpenQuickUtility(utility)}
-                                            style={styles.middleButton}
-                                        >
-                                            <View style={styles.middleButtonContentInline}>
-                                                <View
-                                                    style={[
-                                                        styles.middleButtonIconSquare,
-                                                        utility.iconBackgroundColor ? { backgroundColor: utility.iconBackgroundColor } : null,
-                                                    ]}
-                                                >
-                                                    <Ionicons name={utility.icon} size={20} color="#fff" style={styles.middleButtonIcon} />
-                                                </View>
-                                                <Text numberOfLines={1} style={[styles.middleButtonText, { fontSize: middleButtonFontSize }]}>{utility.title}</Text>
+                                    <Ionicons
+                                        name={isMiddleBlockExpanded ? "chevron-down-outline" : "chevron-up-outline"}
+                                        size={18}
+                                        color="#555"
+                                    />
+                                </TouchableOpacity>
+                            </View>
+                            <ScrollView
+                                showsVerticalScrollIndicator={false}
+                                contentContainerStyle={styles.middleScrollContent}
+                            >
+                                {quickUtilities.map((utility) => (
+                                    <TouchableOpacity
+                                        key={utility.id}
+                                        activeOpacity={0.8}
+                                        onPress={() => handleOpenQuickUtility(utility)}
+                                        style={styles.middleButton}
+                                    >
+                                        <View style={styles.middleButtonContentInline}>
+                                            <View
+                                                style={[
+                                                    styles.middleButtonIconSquare,
+                                                    utility.iconBackgroundColor ? { backgroundColor: utility.iconBackgroundColor } : null,
+                                                ]}
+                                            >
+                                                <Ionicons name={utility.icon} size={20} color="#fff" style={styles.middleButtonIcon} />
                                             </View>
-                                        </TouchableOpacity>
-                                    ))}
-                                </ScrollView>
-                            </Animated.View>
+                                            <Text numberOfLines={2} ellipsizeMode="tail" style={[styles.middleButtonText, { fontSize: middleButtonFontSize }]}>{utility.title}</Text>
+                                        </View>
+                                    </TouchableOpacity>
+                                ))}
+                            </ScrollView>
                         </View>
 
                         <MonthCalendarModal
@@ -696,6 +687,11 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
                                 <ScrollView contentContainerStyle={styles.modalScrollContent}>
                                     {selectedLe?.ban_van && (
                                         <>
+                                            {selectedLe.title && (
+                                                <View style={{ marginBottom: 20 }}>
+                                                    <Text style={[styles.sectionTitle, {textAlign: "center", fontSize: 22, color: modalColors.title, fontSize: 18 * fontScale }]}>{selectedLe.title}</Text>                                                    
+                                                </View>
+                                            )}
                                             {selectedLe.ban_van.bd1_le && (
                                                 <View style={{ marginBottom: 20 }}>
                                                     <Text style={[styles.sectionTitle, { color: modalColors.title, fontSize: 18 * fontScale }]}>Bài đọc I: {selectedLe.ban_van?.bd1_le_trich_tu}</Text>
@@ -726,7 +722,7 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
                                                     <RenderHTML contentWidth={contentWidth} source={{ html: selectedLe.ban_van.phuc_am }} tagsStyles={tagsStyles} />
                                                 </View>
                                             )}
-                                            {selectedLe.articles && (
+                                            {selectedLe.articles?.length > 0 && (
                                                 <View style={{ marginBottom: 20 }}>
                                                     <Text style={[styles.sectionTitle, { color: modalColors.title, fontSize: 18 * fontScale }]}>{selectedLe.articles[0]?`Suy niệm:`:''}</Text>
                                                     <Text style={[styles.sectionTitle, { color: modalColors.titleText, fontSize: 18 * fontScale, textAlign: 'center' }]}>{selectedLe.articles[0]?.title}</Text>
@@ -996,16 +992,8 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         letterSpacing: 0.8,
     },
-    fixedMiddleBlock: {
-        position: 'absolute',
-        left: 0,
-        right: 0,
-        alignItems: 'center',
-        justifyContent: 'flex-end',
-        zIndex: 20,
-    },
     middleBlock: {
-        backgroundColor: 'rgb(255, 255, 255)',
+        backgroundColor: 'rgba(255, 250, 207, 0.99)',
         borderRadius: 15,
         paddingTop: 10,
         paddingHorizontal: 8,
@@ -1080,6 +1068,7 @@ const styles = StyleSheet.create({
         color: '#053c8d',
         fontSize: 14,
         fontWeight: 'bold',
+        textAlign: 'center',
     },
 
 });

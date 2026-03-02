@@ -644,7 +644,7 @@ const MonthCalendarModal = ({
                                             >
                                                 <Text style={styles.infoTextSub}>{le.title}</Text>
                                                 <Text style={styles.summaryText}>
-                                                    {le.ban_van?.bd1_le_trich_tu
+                                                    {le.ban_van?.bd1_le_trich_tu && le.ban_van?.bd1_le_trich_tu.trim() != ""
                                                         ? `${le.ban_van.bd1_le_trich_tu}; `
                                                         : ""}
                                                     {le.ban_van?.bd2_trich_tu
@@ -873,7 +873,7 @@ const MonthCalendarModal = ({
                                             />
                                         </>
                                     )}
-                                    {selectedLe.articles && (
+                                    {selectedLe.articles?.length > 0 && (
                                         <>
                                             <Text
                                                 style={[styles.secTitle, { color: modalColors.title }]}
