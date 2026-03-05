@@ -87,7 +87,7 @@ export const useUpdateVersion = () => {
                                     onPress: () => {
                                         Platform.OS === 'android'
                                             ? Linking.openURL(
-                                                '',
+                                                'https://play.google.com/store/apps/details?id=com.application.tgphn',
                                             )
                                             : Linking.openURL(
                                                 'https://apps.apple.com/us/app/truy%E1%BB%81n-th%C3%B4ng-tgp-h%C3%A0-n%E1%BB%99i/id6756556449',
