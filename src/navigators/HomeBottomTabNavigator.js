@@ -14,13 +14,15 @@ const Tab = createBottomTabNavigator();
 export default function HomeBottomTabNavigator() {
     const insets = useSafeAreaInsets();
     const lichScreenRef = useRef(null);
+    const androidTopTabBarHeight = 65 + insets.top;
 
     return (
         <Tab.Navigator
+            sceneContainerStyle={Platform.OS === 'android' ? { paddingTop: androidTopTabBarHeight } : undefined}
             screenOptions={({ route }) => ({
                 headerShown: false,
                 tabBarActiveTintColor: '#d59d2c',
-                tabBarInactiveTintColor: '#8e8e93',
+                tabBarInactiveTintColor: '#6d6d6f',
                 // 1. Xử lý font chữ nhỏ hơn một chút để đủ diện tích chiều ngang
                 tabBarLabelStyle: {
                     fontSize: 9.5, // Giảm nhẹ từ 10 xuống 9.5
@@ -29,14 +31,19 @@ export default function HomeBottomTabNavigator() {
                 },
                 tabBarStyle: {
                     backgroundColor: '#ffffff',
-                    height: Platform.OS === 'ios' ? 75 : 65,
-                    paddingBottom: Platform.OS === 'ios' ? insets.bottom - 12 : 8,
-                    paddingTop: 10,
+                    height: Platform.OS === 'ios' ? 75 : androidTopTabBarHeight,
+                    paddingBottom: Platform.OS === 'ios' ? Math.max(insets.bottom - 12, 0) : 8,
+                    paddingTop: Platform.OS === 'ios' ? 10 : Math.max(insets.top, 10),
                     // 2. Thêm Padding chiều ngang cho toàn thanh Tab
                     paddingHorizontal: 10,
-                    borderTopWidth: 0.5,
+                    borderTopWidth: Platform.OS === 'ios' ? 0.5 : 0,
                     borderTopColor: '#e0e0e0',
-                    position: 'relative',
+                    borderBottomWidth: Platform.OS === 'android' ? 0.5 : 0,
+                    borderBottomColor: '#e0e0e0',
+                    position: Platform.OS === 'android' ? 'absolute' : 'relative',
+                    top: Platform.OS === 'android' ? 0 : undefined,
+                    left: Platform.OS === 'android' ? 0 : undefined,
+                    right: Platform.OS === 'android' ? 0 : undefined,
                 },
                 // 3. Quan trọng: Tinh chỉnh Style cho từng Item để không bị lấn sân nhau
                 tabBarItemStyle: {

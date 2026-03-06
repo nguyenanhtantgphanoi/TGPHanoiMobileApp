@@ -14,20 +14,12 @@ import {
     StatusBar,
     Platform,
     useWindowDimensions,
-    Animated,
-    Easing,
 } from 'react-native';
 import PagerView from 'react-native-pager-view';
 import axios from 'axios';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Solar } from 'lunar-javascript';
 import renderAoLe from '../utils/renderAoLe';
-import {
-    GestureHandlerRootView,
-    FlingGestureHandler,
-    Directions,
-    State
-} from 'react-native-gesture-handler';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import RenderHTML from "react-native-render-html";
 import { useIsFocused, useNavigation } from '@react-navigation/native';
@@ -37,7 +29,15 @@ import { Ionicons } from '@expo/vector-icons';
 const { width, height } = Dimensions.get('window');
 const FONT_SCALE_KEY = "@kinh_font_scale";
 const DARK_MODE_KEY = "@kinh_dark_mode";
-const QUICK_UTILITY_API_URL = 'https://mapp.tgphanoi.org/get-quick-utilities';
+const UTILITY_SWIPE_HINT_SEEN_KEY = "@utility_swipe_hint_seen";
+const QUICK_UTILITY_API_URL = 'https://mapp.tgphanoi.org/get-quick-utilities-v2';
+const DEFAULT_ACTION_BUTTON_COLORS = {
+    cgkpv: '#c0392b',
+    reading: '#8e44ad',
+    lich: '#16a085',
+    homNay: '#2980b9',
+    homNayDisabled: '#95a5a6',
+};
 const DEFAULT_QUICK_UTILITIES = [
 
 ];
@@ -52,7 +52,7 @@ for (let y = 2025; y <= 2026; y++) {
     }
 }
 
-const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible, middleBlockReservedSpace, onGoToToday, onOpenMonthCalendar }) => {
+const DayCard = memo(({ item, insets, topNavigatorOffset, setSelectedLe, setModalVisible, middleBlockReservedSpace, actionButtonColors }) => {
     const navigation = useNavigation();
     const { width: screenWidth, height: screenHeight } = useWindowDimensions();
     const dateObj = new Date(item.date);
@@ -61,6 +61,7 @@ const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible, middleBloc
     const lunar = solar.getLunar();
     const listLe = useMemo(() => item.arr_cac_le?.length ? item.arr_cac_le : [item], [item.arr_cac_le, item]);
     const hasXuChauLuot = Boolean(item?.xu_chau_luot?.trim());
+    const resolvedActionButtonColors = actionButtonColors || DEFAULT_ACTION_BUTTON_COLORS;
 
     const [activeLeIndex, setActiveLeIndex] = useState(0);
     // State quản lý chiều cao để PagerView co giãn theo nội dung
@@ -206,7 +207,14 @@ const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible, middleBloc
     const lunarCan = ["Canh", "Tân", "Nhâm", "Quý", "Giáp", "Ất", "Bính", "Đinh", "Mậu", "Kỷ"]
 
     return (
-        <View style={[styles.page, styles.container_x, (isVeryShort || isCompactHeight) && { justifyContent: 'flex-start' }]}>
+        <View
+            style={[
+                styles.page,
+                styles.container_x,
+                Platform.OS === 'android' && { paddingTop: topNavigatorOffset },
+                (isVeryShort || isCompactHeight) && { justifyContent: 'flex-start' }
+            ]}
+        >
             <View
                 style={[
                     styles.topBlock,
@@ -246,7 +254,7 @@ const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible, middleBloc
                                 year: date.getFullYear().toString(),
                             });
                         }}
-                        style={styles.cgkpvTopButton}
+                        style={[styles.cgkpvTopButton, { backgroundColor: resolvedActionButtonColors.cgkpv }]}
                     >
                         <View style={styles.cgkpvTopButtonContent}>
                             <Ionicons name="book-outline" size={20} color="#fff" />
@@ -257,24 +265,14 @@ const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible, middleBloc
                     <TouchableOpacity
                         activeOpacity={0.8}
                         onPress={() => {
-                            const date = new Date(item.date);
-                            onOpenMonthCalendar?.(date);
+                            setSelectedLe(listLe[0] || item);
+                            setModalVisible(true);
                         }}
-                        style={styles.monthTopButton}
+                        style={[styles.readingTopButton, { backgroundColor: resolvedActionButtonColors.reading }]}
                     >
                         <View style={styles.cgkpvTopButtonContent}>
-                            <Ionicons name="calendar-clear-outline" size={20} color="#fff" />
-                            <Text numberOfLines={1} style={styles.cgkpvTopButtonText}>Lịch</Text>
-                        </View>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        activeOpacity={0.8}
-                        onPress={onGoToToday}
-                        style={styles.todayTopButton}
-                    >
-                        <View style={styles.cgkpvTopButtonContent}>
-                            <Text numberOfLines={1} style={styles.cgkpvTopButtonText}>Hôm nay</Text>
+                            <Ionicons name="document-text-outline" size={20} color="#fff" />
+                            <Text numberOfLines={1} style={styles.cgkpvTopButtonText}>Bài đọc & Suy niệm</Text>
                         </View>
                     </TouchableOpacity>
                 </View>
@@ -369,7 +367,7 @@ const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible, middleBloc
                     </View>
                 )}
             </View>
-        </ View>
+        </View>
     );
 });
 
@@ -394,16 +392,11 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
     const [darkMode, setDarkMode] = useState(false);
     const [currentDayIndex, setCurrentDayIndex] = useState(0);
     const [quickUtilities, setQuickUtilities] = useState(DEFAULT_QUICK_UTILITIES);
+    const [actionButtonColors, setActionButtonColors] = useState(DEFAULT_ACTION_BUTTON_COLORS);
     const [quickUtilityHtmlModalVisible, setQuickUtilityHtmlModalVisible] = useState(false);
     const [quickUtilityHtmlTitle, setQuickUtilityHtmlTitle] = useState('Tiện ích');
     const [quickUtilityHtmlContent, setQuickUtilityHtmlContent] = useState('');
-
-    // Animation values
-    const [middleBlockHeight, setMiddleBlockHeight] = useState(120);
-    const [isMiddleBlockExpanded, setIsMiddleBlockExpanded] = useState(false);
-    const animatedHeight = useRef(new Animated.Value(120)).current;
-    const rotateAnim = useRef(new Animated.Value(0)).current;
-    const contentOpacity = useRef(new Animated.Value(1)).current;
+    const [showUtilitySwipeHint, setShowUtilitySwipeHint] = useState(false);
 
     useImperativeHandle(ref, () => ({ goToToday: () => pagerRef.current?.setPage(initialIndex) }));
     const syncSettings = async () => {
@@ -463,10 +456,56 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
         };
     };
 
+    const resolveColorValue = (...values) => {
+        const found = values.find(value => typeof value === 'string' && value.trim());
+        return found ? found.trim() : undefined;
+    };
+
+    const extractButtonColors = (source) => {
+        if (!source || typeof source !== 'object') return {};
+
+        const candidateMaps = [
+            source,
+            source.buttonColors,
+            source.actionButtonColors,
+            source.colors,
+            source.config,
+            source.settings,
+        ].filter(Boolean);
+
+        const nextColors = {};
+
+        candidateMaps.forEach((candidate) => {
+            if (!candidate || typeof candidate !== 'object') return;
+
+            const cgkpv = resolveColorValue(candidate.cgkpv, candidate.cgkpvColor, candidate.cgkpv_color, candidate.cgkpvButtonColor, candidate.cgkpv_button_color);
+            const reading = resolveColorValue(candidate.reading, candidate.readingColor, candidate.reading_color, candidate.baiDocSuyNiem, candidate.baiDocSuyNiemColor, candidate.bai_doc_suy_niem_color);
+            const lich = resolveColorValue(candidate.lich, candidate.lichColor, candidate.lich_color, candidate.calendarColor, candidate.calendar_color);
+            const homNay = resolveColorValue(candidate.homNay, candidate.homNayColor, candidate.hom_nay_color, candidate.todayColor, candidate.today_color);
+            const homNayDisabled = resolveColorValue(candidate.homNayDisabled, candidate.homNayDisabledColor, candidate.hom_nay_disabled_color, candidate.todayDisabledColor, candidate.today_disabled_color);
+
+            if (cgkpv) nextColors.cgkpv = cgkpv;
+            if (reading) nextColors.reading = reading;
+            if (lich) nextColors.lich = lich;
+            if (homNay) nextColors.homNay = homNay;
+            if (homNayDisabled) nextColors.homNayDisabled = homNayDisabled;
+        });
+
+        return nextColors;
+    };
+
     const fetchQuickUtilities = async () => {
         try {
             const res = await axios.get(QUICK_UTILITY_API_URL);
+            const nextColorsFromRoot = extractButtonColors(res.data);
             const payload = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.data) ? res.data.data : []);
+            const nextColorsFromPayload = payload.reduce((acc, item) => ({ ...acc, ...extractButtonColors(item) }), {});
+            const mergedColors = { ...nextColorsFromRoot, ...nextColorsFromPayload };
+
+            if (Object.keys(mergedColors).length > 0) {
+                setActionButtonColors(prev => ({ ...prev, ...mergedColors }));
+            }
+
             const apiButtons = payload
                 .map((item, index) => normalizeQuickUtility(item, index))
                 .filter(Boolean);
@@ -485,6 +524,29 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
         fetchData();
         fetchYearData();
         fetchQuickUtilities();
+    }, []);
+
+    useEffect(() => {
+        let hideTimer;
+
+        const initUtilitySwipeHint = async () => {
+            try {
+                const seenHint = await AsyncStorage.getItem(UTILITY_SWIPE_HINT_SEEN_KEY);
+                if (!seenHint) {
+                    setShowUtilitySwipeHint(true);
+                    await AsyncStorage.setItem(UTILITY_SWIPE_HINT_SEEN_KEY, 'true');
+                    hideTimer = setTimeout(() => {
+                        setShowUtilitySwipeHint(false);
+                    }, 5000);
+                }
+            } catch { }
+        };
+
+        initUtilitySwipeHint();
+
+        return () => {
+            if (hideTimer) clearTimeout(hideTimer);
+        };
     }, []);
 
     useEffect(() => {
@@ -507,53 +569,6 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
         }
     };
 
-    const onFlingUp = ({ nativeEvent }) => {
-        if (nativeEvent.state === State.ACTIVE) {
-            const today = new Date();
-            const idx = GENERATED_MONTHS.findIndex(m => m.month === today.getMonth() && m.year === today.getFullYear());
-            setMonthPagerIndex(idx !== -1 ? idx : 0);
-            handleDayPress(today);
-            setMonthModalVisible(true);
-        }
-    };
-
-    // Animation functions for middle block
-    const toggleMiddleBlock = () => {
-        const toValue = isMiddleBlockExpanded ? 0 : 1;
-
-        // Animate height
-        Animated.timing(animatedHeight, {
-            toValue: isMiddleBlockExpanded ? defaultMiddleBlockMaxHeight : expandedMiddleBlockMaxHeight,
-            duration: 300,
-            easing: Easing.bezier(0.4, 0, 0.2, 1),
-            useNativeDriver: false,
-        }).start();
-
-        // Animate rotation of chevron
-        Animated.timing(rotateAnim, {
-            toValue: toValue,
-            duration: 300,
-            easing: Easing.bezier(0.4, 0, 0.2, 1),
-            useNativeDriver: true,
-        }).start();
-
-        // Fade animation for content
-        Animated.sequence([
-            Animated.timing(contentOpacity, {
-                toValue: 0.7,
-                duration: 100,
-                useNativeDriver: true,
-            }),
-            Animated.timing(contentOpacity, {
-                toValue: 1,
-                duration: 200,
-                useNativeDriver: true,
-            }),
-        ]).start();
-
-        setIsMiddleBlockExpanded(!isMiddleBlockExpanded);
-    };
-
     const modalColors = useMemo(() => ({
         bg: darkMode ? "#121212" : "#FFFFFF",
         text: darkMode ? "#EAEAEA" : "#000000",
@@ -570,31 +585,20 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
         em: { fontStyle: "italic", color: modalColors.text }
     }), [fontScale, modalColors]);
 
+    const toDateKey = (value) => {
+        const dateValue = value instanceof Date ? value : new Date(value);
+        if (Number.isNaN(dateValue.getTime())) return '';
+        return `${dateValue.getFullYear()}-${String(dateValue.getMonth() + 1).padStart(2, '0')}-${String(dateValue.getDate()).padStart(2, '0')}`;
+    };
+
     const currentDay = allDays[currentDayIndex] || allDays[initialIndex] || null;
     const currentDate = currentDay?.date ? new Date(currentDay.date) : null;
+    const isCurrentDayToday = toDateKey(currentDay?.date) === toDateKey(new Date());
+    const androidTopNavigatorOffset = Platform.OS === 'android' ? 65 + insets.top : 0;
+    const mainPagerHeight = Math.max(420, Math.floor(screenHeight * 0.74));
 
-    const middleBlockBottomOffset = Platform.OS === 'ios' ? 8 : Math.max(insets.bottom, 4);
-    const middleBlockReservedSpace = middleBlockBottomOffset + middleBlockHeight + 15;
-    const defaultMiddleBlockMaxHeight = Math.min(Math.max(100, Math.floor(screenHeight * 0.18)), 160);
-    const expandedMiddleBlockMaxHeight = Math.max(180, Math.floor(screenHeight * 0.5));
+    const middleBlockReservedSpace = 20;
     const middleButtonFontSize = screenHeight < 720 ? 12 : 13;
-
-    // Initialize animated height with default value
-    useEffect(() => {
-        animatedHeight.setValue(defaultMiddleBlockMaxHeight);
-    }, []);
-
-    // Update animated height when default/expanded values change
-    useEffect(() => {
-        if (!isMiddleBlockExpanded) {
-            animatedHeight.setValue(defaultMiddleBlockMaxHeight);
-        }
-    }, [defaultMiddleBlockMaxHeight]);
-
-    const spin = rotateAnim.interpolate({
-        inputRange: [0, 1],
-        outputRange: ['0deg', '180deg'],
-    });
 
     const handleOpenQuickUtility = (item) => {
         if (!item) return;
@@ -611,24 +615,38 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
         }
     };
 
+    const handleGoToToday = () => {
+        pagerRef.current?.setPage(initialIndex);
+        setCurrentDayIndex(initialIndex);
+    };
+
+    const handleOpenMonthCalendar = (date) => {
+        const targetDate = date instanceof Date ? date : new Date();
+        const idx = GENERATED_MONTHS.findIndex(
+            m => m.month === targetDate.getMonth() && m.year === targetDate.getFullYear()
+        );
+        setMonthPagerIndex(idx !== -1 ? idx : 0);
+        handleDayPress(targetDate);
+        setMonthModalVisible(true);
+    };
+
     if (loading) return <View style={styles.loadingContainer}><ActivityIndicator size="large" color="#007AFF" /></View>;
 
     return (
-        <GestureHandlerRootView style={{ flex: 1 }}>
-            <FlingGestureHandler direction={Directions.UP} onHandlerStateChange={onFlingUp}>
-                <View style={{ flex: 1 }}>
-                    <ImageBackground source={require('../../assets/images/11.jpg')} style={styles.container}>
+        <View style={{ flex: 1 }}>
+            <ImageBackground source={require('../../assets/images/11.jpg')} style={styles.container}>
+                <ScrollView
+                    style={styles.screenScroll}
+                    contentContainerStyle={styles.screenScrollContent}
+                    showsVerticalScrollIndicator={false}
+                >
                         <PagerView
                             ref={pagerRef}
-                            style={styles.mainPager}
+                            style={[styles.mainPager, { height: mainPagerHeight }]}
                             initialPage={initialIndex}
                             offscreenPageLimit={1}
                             onPageSelected={(e) => {
                                 setCurrentDayIndex(e.nativeEvent.position);
-                                // Collapse middle block when changing page
-                                if (isMiddleBlockExpanded) {
-                                    toggleMiddleBlock();
-                                }
                             }}
                         >
                             {allDays.map((day, i) => (
@@ -636,88 +654,79 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
                                     <DayCard
                                         item={day}
                                         insets={insets}
+                                        topNavigatorOffset={androidTopNavigatorOffset}
                                         setSelectedLe={setSelectedLe}
                                         setModalVisible={setModalVisible}
                                         middleBlockReservedSpace={middleBlockReservedSpace}
-                                        onGoToToday={() => {
-                                            pagerRef.current?.setPage(initialIndex);
-                                            setCurrentDayIndex(initialIndex);
-                                        }}
-                                        onOpenMonthCalendar={(date) => {
-                                            const targetDate = date instanceof Date ? date : new Date();
-                                            const idx = GENERATED_MONTHS.findIndex(
-                                                m => m.month === targetDate.getMonth() && m.year === targetDate.getFullYear()
-                                            );
-                                            setMonthPagerIndex(idx !== -1 ? idx : 0);
-                                            handleDayPress(targetDate);
-                                            setMonthModalVisible(true);
-                                        }}
+                                        actionButtonColors={actionButtonColors}
                                     />
                                 </View>
                             ))}
                         </PagerView>
 
-                        <Animated.View
+                        <View
                             style={[
+                                styles.externalActionRow,
                                 {
-                                    position: 'absolute',
-                                    alignSelf: 'center',
-                                    alignItems: 'center',
-                                    justifyContent: 'flex-end',
-                                    zIndex: 20,
-                                    bottom: middleBlockBottomOffset,
-                                },
+                                    width: Math.min(contentWidth * 0.92, 460),
+                                }
+                            ]}
+                        >
+                            <TouchableOpacity
+                                activeOpacity={0.8}
+                                onPress={() => handleOpenMonthCalendar(currentDate || new Date())}
+                                style={[styles.monthTopButton, { backgroundColor: actionButtonColors.lich }]}
+                            >
+                                <View style={styles.cgkpvTopButtonContent}>
+                                    <Ionicons name="calendar-clear-outline" size={20} color="#fff" />
+                                    <Text numberOfLines={1} style={styles.cgkpvTopButtonText}>Lịch</Text>
+                                </View>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                activeOpacity={0.8}
+                                disabled={isCurrentDayToday}
+                                onPress={isCurrentDayToday ? undefined : handleGoToToday}
+                                style={[
+                                    styles.todayTopButton,
+                                    { backgroundColor: actionButtonColors.homNay },
+                                    isCurrentDayToday && [styles.todayTopButtonDisabled, { backgroundColor: actionButtonColors.homNayDisabled }]
+                                ]}
+                            >
+                                <View style={styles.cgkpvTopButtonContent}>
+                                    <Ionicons name="today-outline" size={20} color="#fff" />
+                                    <Text numberOfLines={1} style={styles.cgkpvTopButtonText}>Hôm nay</Text>
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+
+                        <View
+                            style={[
                                 styles.middleBlock,
                                 {
                                     width: Math.min(contentWidth * 0.92, 460),
-                                    height: animatedHeight,
-                                    maxHeight: animatedHeight,
                                 }
                             ]}
-                            onLayout={(event) => {
-                                const measuredHeight = Math.ceil(event.nativeEvent.layout.height || 0);
-                                if (measuredHeight && measuredHeight !== middleBlockHeight) {
-                                    setMiddleBlockHeight(measuredHeight);
-                                }
-                            }}
                         >
                             <View style={styles.middleBlockHeader}>
                                 <Text style={styles.middleBlockTitle}>Tiện ích </Text>
-                                <TouchableOpacity
-                                    activeOpacity={0.8}
-                                    style={styles.middleBlockDragButton}
-                                    onPress={toggleMiddleBlock}
-                                >
-                                    <Animated.View style={{ transform: [{ rotate: spin }] }}>
-                                        <Ionicons
-                                            name="chevron-up-outline"
-                                            size={18}
-                                            color="#555"
-                                        />
-                                    </Animated.View>
-                                </TouchableOpacity>
                             </View>
-                            <Animated.ScrollView
-                                showsVerticalScrollIndicator={false}
+                            {showUtilitySwipeHint && (
+                                <Text style={styles.utilitySwipeHintText}>
+                                    Vuốt ngang để xem thêm tiện ích
+                                </Text>
+                            )}
+                            <ScrollView
+                                horizontal
+                                nestedScrollEnabled
+                                showsHorizontalScrollIndicator={false}
                                 contentContainerStyle={styles.middleScrollContent}
-                                style={{ opacity: contentOpacity }}
                             >
-                                {quickUtilities.map((utility, index) => {
-                                    // Thêm animation delay cho từng item
-                                    const itemDelay = index * 50;
-                                    const itemScale = rotateAnim.interpolate({
-                                        inputRange: [0, 1],
-                                        outputRange: [1, 1],
-                                    });
-
+                                {quickUtilities.map((utility) => {
                                     return (
-                                        <Animated.View
+                                        <View
                                             key={utility.id}
-                                            style={{
-                                                width: '48%',
-                                                transform: [{ scale: itemScale }],
-                                                opacity: contentOpacity,
-                                            }}
+                                            style={styles.middleItem}
                                         >
                                             <TouchableOpacity
                                                 activeOpacity={0.8}
@@ -736,11 +745,11 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
                                                     <Text numberOfLines={2} ellipsizeMode="tail" style={[styles.middleButtonText, { fontSize: middleButtonFontSize }]}>{utility.title}</Text>
                                                 </View>
                                             </TouchableOpacity>
-                                        </Animated.View>
+                                        </View>
                                     );
                                 })}
-                            </Animated.ScrollView>
-                        </Animated.View>
+                            </ScrollView>
+                        </View>
 
                         <MonthCalendarModal
                             visible={monthModalVisible}
@@ -838,16 +847,20 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
                                 </ScrollView>
                             </View>
                         </Modal>
-                    </ImageBackground>
-                </View>
-            </FlingGestureHandler>
-        </GestureHandlerRootView>
+                </ScrollView>
+            </ImageBackground>
+        </View>
     );
 });
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
-    mainPager: { flex: 1 },
+    screenScroll: { flex: 1 },
+    screenScrollContent: {
+        alignItems: 'center',
+        paddingBottom: 16,
+    },
+    mainPager: { width: '100%' },
     loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     page: { flex: 1, alignItems: 'center', justifyContent: 'flex-start' },
     topBlock: { width: '100%', backgroundColor: 'rgba(255,255,255,0.75)', padding: 20, alignItems: 'center', borderTopLeftRadius: 30, borderTopRightRadius: 30 },
@@ -858,8 +871,17 @@ const styles = StyleSheet.create({
         width: '100%',
         flexDirection: 'row',
         alignItems: 'center',
+        
+        columnGap: 6,
+    },
+    externalActionRow: {
+        alignSelf: 'center',
+        flexDirection: 'row',
+        alignItems: 'center',
         justifyContent: 'space-between',
         columnGap: 6,
+        marginTop: 10,
+        marginBottom: 10,
     },
     todayTopButton: {
         backgroundColor: '#2980b9',
@@ -869,16 +891,29 @@ const styles = StyleSheet.create({
         flex: 1,
         minWidth: 0,
     },
+    todayTopButtonDisabled: {
+        backgroundColor: '#95a5a6',
+    },
     cgkpvTopButton: {
         backgroundColor: '#c0392b',
         borderRadius: 12,
         paddingVertical: 8,
         paddingHorizontal: 10,
-        flex: 1,
-        minWidth: 0,
+        flexGrow: 0,
+        flexShrink: 0,
+        
+    },
+    readingTopButton: {
+        backgroundColor: '#8e44ad',
+        borderRadius: 12,
+        paddingVertical: 8,
+        paddingHorizontal: 10,
+        flexGrow: 0,
+        flexShrink: 0,
+        
     },
     monthTopButton: {
-        backgroundColor: '#7f8c8d',
+        backgroundColor: '#16a085',
         borderRadius: 12,
         paddingVertical: 8,
         paddingHorizontal: 10,
@@ -891,6 +926,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         gap: 6,
         minWidth: 0,
+        paddingHorizontal: 2,
     },
     cgkpvTopButtonText: {
         color: '#fff',
@@ -1083,15 +1119,17 @@ const styles = StyleSheet.create({
     middleBlock: {
         backgroundColor: 'rgba(255, 250, 207, 0.99)',
         borderRadius: 15,
+        height: 165,
         paddingTop: 10,
         paddingHorizontal: 8,
         paddingVertical: 8,
-        overflow: 'hidden',
+        overflow: 'visible',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.12,
         shadowRadius: 3,
         elevation: 3,
+        marginBottom: 8,
     },
     middleBlockHeader: {
         flexDirection: 'row',
@@ -1106,22 +1144,21 @@ const styles = StyleSheet.create({
         color: '#333',
         textAlign: 'left',
     },
-    middleBlockDragButton: {
-        width: 26,
-        height: 26,
-        borderRadius: 13,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: 'rgba(0,0,0,0.06)',
+    utilitySwipeHintText: {
+        fontSize: 12,
+        color: '#666',
+        textAlign: 'center',
+        marginBottom: 6,
     },
     middleScrollContent: {
         flexDirection: 'row',
-        flexWrap: 'wrap',
-        justifyContent: 'space-between',
-        alignItems: 'stretch',
+        alignItems: 'flex-start',
         paddingHorizontal: 8,
         paddingBottom: 4,
         gap: 8,
+    },
+    middleItem: {
+        width: 116,
     },
     middleButton: {
 
