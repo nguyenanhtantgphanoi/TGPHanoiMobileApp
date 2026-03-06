@@ -21,36 +21,45 @@ export default function HomeBottomTabNavigator() {
                 headerShown: false,
                 tabBarActiveTintColor: '#d59d2c',
                 tabBarInactiveTintColor: '#8e8e93',
+                // 1. Xử lý font chữ nhỏ hơn một chút để đủ diện tích chiều ngang
+                tabBarLabelStyle: {
+                    fontSize: 9.5, // Giảm nhẹ từ 10 xuống 9.5
+                    fontWeight: '600',
+                    marginBottom: Platform.OS === 'ios' ? 4 : 4,
+                },
                 tabBarStyle: {
-                    backgroundColor: '#f9f9f9',
-                    height: 56,
-                    paddingBottom: 6,
-                    paddingTop: 8,
-                    position: Platform.OS === 'android' ? 'absolute' : 'relative',
-                    left: 0,
-                    right: 0,
-                    top: Platform.OS === 'android' ? insets.top : undefined,
-                    bottom: Platform.OS === 'android' ? undefined : 0,
-                    zIndex: 10,
-                    elevation: 10,
+                    backgroundColor: '#ffffff',
+                    height: Platform.OS === 'ios' ? 75 : 65,
+                    paddingBottom: Platform.OS === 'ios' ? insets.bottom - 12 : 8,
+                    paddingTop: 10,
+                    // 2. Thêm Padding chiều ngang cho toàn thanh Tab
+                    paddingHorizontal: 10,
+                    borderTopWidth: 0.5,
+                    borderTopColor: '#e0e0e0',
+                    position: 'relative',
                 },
-                sceneStyle: {
-                    paddingTop: Platform.OS === 'android' ? (56 + insets.top) : 0,
+                // 3. Quan trọng: Tinh chỉnh Style cho từng Item để không bị lấn sân nhau
+                tabBarItemStyle: {
+                    paddingHorizontal: 2,
                 },
-                tabBarIcon: ({ color }) => {
+                tabBarIcon: ({ color, focused }) => {
                     let iconName;
-                    if (route.name === 'Lịch') iconName = 'calendar-outline';
-                    else if (route.name === 'Tin tức') iconName = 'newspaper-outline';
-                    else if (route.name === 'Kinh nguyện') iconName = 'book-outline';
-                    else if (route.name === 'Danh mục') iconName = 'menu-outline';
-                    else if (route.name === 'Các nghi thức') iconName = 'library-outline';
-                    return <Ionicons name={iconName} size={24} color={color} />;
+                    if (route.name === 'Lịch') iconName = focused ? 'calendar' : 'calendar-outline';
+                    else if (route.name === 'Tin tức') iconName = focused ? 'newspaper' : 'newspaper-outline';
+                    else if (route.name === 'Kinh nguyện') iconName = focused ? 'book' : 'book-outline';
+                    else if (route.name === 'Danh mục') iconName = focused ? 'menu' : 'menu-outline';
+                    else if (route.name === 'Các nghi thức') iconName = focused ? 'library' : 'library-outline';
+                    return <Ionicons name={iconName} size={22} color={color} />;
                 },
             })}
         >
             <Tab.Screen
                 name="Lịch"
-                options={{ title: "Lịch Công giáo" }}
+                options={{
+                    title: "Lịch Công giáo",
+                    // Bạn có thể rút gọn title nếu vẫn bị cắt quá nhiều
+                    tabBarLabel: "Trang chủ"
+                }}
                 listeners={({ navigation }) => ({
                     tabPress: (e) => {
                         if (navigation.isFocused()) {
@@ -62,7 +71,11 @@ export default function HomeBottomTabNavigator() {
                 {() => <LichCongGiaoScreen ref={lichScreenRef} />}
             </Tab.Screen>
             <Tab.Screen name="Tin tức" component={NewsScreen} />
-            <Tab.Screen name="Các nghi thức" component={CacNghiThucScreen} />
+            <Tab.Screen
+                name="Các nghi thức"
+                options={{ tabBarLabel: "Nghi thức" }} // Rút gọn để hiển thị đủ đẹp
+                component={CacNghiThucScreen}
+            />
             <Tab.Screen name="Kinh nguyện" component={KinhNguyenScreen} />
             <Tab.Screen name="Danh mục" component={ExtendScreen} />
         </Tab.Navigator>

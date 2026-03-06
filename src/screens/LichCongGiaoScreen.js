@@ -14,6 +14,8 @@ import {
     StatusBar,
     Platform,
     useWindowDimensions,
+    Animated,
+    Easing,
 } from 'react-native';
 import PagerView from 'react-native-pager-view';
 import axios from 'axios';
@@ -37,7 +39,7 @@ const FONT_SCALE_KEY = "@kinh_font_scale";
 const DARK_MODE_KEY = "@kinh_dark_mode";
 const QUICK_UTILITY_API_URL = 'https://mapp.tgphanoi.org/get-quick-utilities';
 const DEFAULT_QUICK_UTILITIES = [
-    
+
 ];
 
 const GENERATED_MONTHS = [];
@@ -211,8 +213,8 @@ const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible, middleBloc
                     {
                         marginTop: Platform.OS === 'android' ? 15 : insets.top + (isVeryShort ? 2 : (isCompactHeight ? 6 : 15)),
                         width: width - 30 > responsiveTopWidth ? responsiveTopWidth : width - 30,
-                        
-                        
+
+
                     },
                 ]}
             >
@@ -285,10 +287,10 @@ const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible, middleBloc
                         marginBottom: bottomMargin,
                     },
                 ]}
-            > 
+            >
                 {/* Gán chiều cao động contentHeight vào PagerView */}
                 <PagerView
-                    style={[styles.pagerLe, { height: contentHeight}]}
+                    style={[styles.pagerLe, { height: contentHeight }]}
                     initialPage={0}
                     onPageSelected={e => setActiveLeIndex(e.nativeEvent.position)}
                 >
@@ -313,7 +315,7 @@ const DayCard = memo(({ item, insets, setSelectedLe, setModalVisible, middleBloc
                                 onLayout={(event) => onLayout(idx, event)}
                                 style={[styles.lePage, { paddingBottom: isVeryShort ? 2 : 6, paddingHorizontal: isVerySmall ? 10 : 15 }]}
                             >
-                                <View> 
+                                <View>
                                     {!!String(displayTitle || '').trim() && (
                                         <Text style={[styles.titleText, { fontSize: scaledTitleFontSize, lineHeight: Math.round(scaledTitleFontSize * 1.2) }]}>{displayTitle}</Text>
                                     )}
@@ -395,6 +397,13 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
     const [quickUtilityHtmlModalVisible, setQuickUtilityHtmlModalVisible] = useState(false);
     const [quickUtilityHtmlTitle, setQuickUtilityHtmlTitle] = useState('Tiện ích');
     const [quickUtilityHtmlContent, setQuickUtilityHtmlContent] = useState('');
+
+    // Animation values
+    const [middleBlockHeight, setMiddleBlockHeight] = useState(120);
+    const [isMiddleBlockExpanded, setIsMiddleBlockExpanded] = useState(false);
+    const animatedHeight = useRef(new Animated.Value(120)).current;
+    const rotateAnim = useRef(new Animated.Value(0)).current;
+    const contentOpacity = useRef(new Animated.Value(1)).current;
 
     useImperativeHandle(ref, () => ({ goToToday: () => pagerRef.current?.setPage(initialIndex) }));
     const syncSettings = async () => {
@@ -508,6 +517,43 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
         }
     };
 
+    // Animation functions for middle block
+    const toggleMiddleBlock = () => {
+        const toValue = isMiddleBlockExpanded ? 0 : 1;
+
+        // Animate height
+        Animated.timing(animatedHeight, {
+            toValue: isMiddleBlockExpanded ? defaultMiddleBlockMaxHeight : expandedMiddleBlockMaxHeight,
+            duration: 300,
+            easing: Easing.bezier(0.4, 0, 0.2, 1),
+            useNativeDriver: false,
+        }).start();
+
+        // Animate rotation of chevron
+        Animated.timing(rotateAnim, {
+            toValue: toValue,
+            duration: 300,
+            easing: Easing.bezier(0.4, 0, 0.2, 1),
+            useNativeDriver: true,
+        }).start();
+
+        // Fade animation for content
+        Animated.sequence([
+            Animated.timing(contentOpacity, {
+                toValue: 0.7,
+                duration: 100,
+                useNativeDriver: true,
+            }),
+            Animated.timing(contentOpacity, {
+                toValue: 1,
+                duration: 200,
+                useNativeDriver: true,
+            }),
+        ]).start();
+
+        setIsMiddleBlockExpanded(!isMiddleBlockExpanded);
+    };
+
     const modalColors = useMemo(() => ({
         bg: darkMode ? "#121212" : "#FFFFFF",
         text: darkMode ? "#EAEAEA" : "#000000",
@@ -526,14 +572,29 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
 
     const currentDay = allDays[currentDayIndex] || allDays[initialIndex] || null;
     const currentDate = currentDay?.date ? new Date(currentDay.date) : null;
-    const [middleBlockHeight, setMiddleBlockHeight] = useState(120);
-    const [isMiddleBlockExpanded, setIsMiddleBlockExpanded] = useState(false);
+
     const middleBlockBottomOffset = Platform.OS === 'ios' ? 8 : Math.max(insets.bottom, 4);
     const middleBlockReservedSpace = middleBlockBottomOffset + middleBlockHeight + 15;
     const defaultMiddleBlockMaxHeight = Math.min(Math.max(100, Math.floor(screenHeight * 0.18)), 160);
     const expandedMiddleBlockMaxHeight = Math.max(180, Math.floor(screenHeight * 0.5));
-    const middleBlockMaxHeight = isMiddleBlockExpanded ? expandedMiddleBlockMaxHeight : defaultMiddleBlockMaxHeight;
     const middleButtonFontSize = screenHeight < 720 ? 12 : 13;
+
+    // Initialize animated height with default value
+    useEffect(() => {
+        animatedHeight.setValue(defaultMiddleBlockMaxHeight);
+    }, []);
+
+    // Update animated height when default/expanded values change
+    useEffect(() => {
+        if (!isMiddleBlockExpanded) {
+            animatedHeight.setValue(defaultMiddleBlockMaxHeight);
+        }
+    }, [defaultMiddleBlockMaxHeight]);
+
+    const spin = rotateAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: ['0deg', '180deg'],
+    });
 
     const handleOpenQuickUtility = (item) => {
         if (!item) return;
@@ -564,7 +625,10 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
                             offscreenPageLimit={1}
                             onPageSelected={(e) => {
                                 setCurrentDayIndex(e.nativeEvent.position);
-                                setIsMiddleBlockExpanded(false);
+                                // Collapse middle block when changing page
+                                if (isMiddleBlockExpanded) {
+                                    toggleMiddleBlock();
+                                }
                             }}
                         >
                             {allDays.map((day, i) => (
@@ -593,7 +657,7 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
                             ))}
                         </PagerView>
 
-                        <View
+                        <Animated.View
                             style={[
                                 {
                                     position: 'absolute',
@@ -604,7 +668,11 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
                                     bottom: middleBlockBottomOffset,
                                 },
                                 styles.middleBlock,
-                                { width: Math.min(contentWidth * 0.92, 460), height: middleBlockMaxHeight, maxHeight: middleBlockMaxHeight }
+                                {
+                                    width: Math.min(contentWidth * 0.92, 460),
+                                    height: animatedHeight,
+                                    maxHeight: animatedHeight,
+                                }
                             ]}
                             onLayout={(event) => {
                                 const measuredHeight = Math.ceil(event.nativeEvent.layout.height || 0);
@@ -618,41 +686,61 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
                                 <TouchableOpacity
                                     activeOpacity={0.8}
                                     style={styles.middleBlockDragButton}
-                                    onPress={() => setIsMiddleBlockExpanded(prev => !prev)}
+                                    onPress={toggleMiddleBlock}
                                 >
-                                    <Ionicons
-                                        name={isMiddleBlockExpanded ? "chevron-down-outline" : "chevron-up-outline"}
-                                        size={18}
-                                        color="#555"
-                                    />
+                                    <Animated.View style={{ transform: [{ rotate: spin }] }}>
+                                        <Ionicons
+                                            name="chevron-up-outline"
+                                            size={18}
+                                            color="#555"
+                                        />
+                                    </Animated.View>
                                 </TouchableOpacity>
                             </View>
-                            <ScrollView
+                            <Animated.ScrollView
                                 showsVerticalScrollIndicator={false}
                                 contentContainerStyle={styles.middleScrollContent}
+                                style={{ opacity: contentOpacity }}
                             >
-                                {quickUtilities.map((utility) => (
-                                    <TouchableOpacity
-                                        key={utility.id}
-                                        activeOpacity={0.8}
-                                        onPress={() => handleOpenQuickUtility(utility)}
-                                        style={styles.middleButton}
-                                    >
-                                        <View style={styles.middleButtonContentInline}>
-                                            <View
-                                                style={[
-                                                    styles.middleButtonIconSquare,
-                                                    utility.iconBackgroundColor ? { backgroundColor: utility.iconBackgroundColor } : null,
-                                                ]}
+                                {quickUtilities.map((utility, index) => {
+                                    // Thêm animation delay cho từng item
+                                    const itemDelay = index * 50;
+                                    const itemScale = rotateAnim.interpolate({
+                                        inputRange: [0, 1],
+                                        outputRange: [1, 1],
+                                    });
+
+                                    return (
+                                        <Animated.View
+                                            key={utility.id}
+                                            style={{
+                                                width: '48%',
+                                                transform: [{ scale: itemScale }],
+                                                opacity: contentOpacity,
+                                            }}
+                                        >
+                                            <TouchableOpacity
+                                                activeOpacity={0.8}
+                                                onPress={() => handleOpenQuickUtility(utility)}
+                                                style={styles.middleButton}
                                             >
-                                                <Ionicons name={utility.icon} size={20} color="#fff" style={styles.middleButtonIcon} />
-                                            </View>
-                                            <Text numberOfLines={2} ellipsizeMode="tail" style={[styles.middleButtonText, { fontSize: middleButtonFontSize }]}>{utility.title}</Text>
-                                        </View>
-                                    </TouchableOpacity>
-                                ))}
-                            </ScrollView>
-                        </View>
+                                                <View style={styles.middleButtonContentInline}>
+                                                    <View
+                                                        style={[
+                                                            styles.middleButtonIconSquare,
+                                                            utility.iconBackgroundColor ? { backgroundColor: utility.iconBackgroundColor } : null,
+                                                        ]}
+                                                    >
+                                                        <Ionicons name={utility.icon} size={20} color="#fff" style={styles.middleButtonIcon} />
+                                                    </View>
+                                                    <Text numberOfLines={2} ellipsizeMode="tail" style={[styles.middleButtonText, { fontSize: middleButtonFontSize }]}>{utility.title}</Text>
+                                                </View>
+                                            </TouchableOpacity>
+                                        </Animated.View>
+                                    );
+                                })}
+                            </Animated.ScrollView>
+                        </Animated.View>
 
                         <MonthCalendarModal
                             visible={monthModalVisible}
@@ -689,7 +777,7 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
                                         <>
                                             {selectedLe.title && (
                                                 <View style={{ marginBottom: 20 }}>
-                                                    <Text style={[styles.sectionTitle, {textAlign: "center", fontSize: 22, color: modalColors.title, fontSize: 18 * fontScale }]}>{selectedLe.title}</Text>                                                    
+                                                    <Text style={[styles.sectionTitle, { textAlign: "center", fontSize: 22, color: modalColors.title, fontSize: 18 * fontScale }]}>{selectedLe.title}</Text>
                                                 </View>
                                             )}
                                             {selectedLe.ban_van.bd1_le && (
@@ -724,7 +812,7 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
                                             )}
                                             {selectedLe.articles?.length > 0 && (
                                                 <View style={{ marginBottom: 20 }}>
-                                                    <Text style={[styles.sectionTitle, { color: modalColors.title, fontSize: 18 * fontScale }]}>{selectedLe.articles[0]?`Suy niệm:`:''}</Text>
+                                                    <Text style={[styles.sectionTitle, { color: modalColors.title, fontSize: 18 * fontScale }]}>{selectedLe.articles[0] ? `Suy niệm:` : ''}</Text>
                                                     <Text style={[styles.sectionTitle, { color: modalColors.titleText, fontSize: 18 * fontScale, textAlign: 'center' }]}>{selectedLe.articles[0]?.title}</Text>
                                                     <Text style={[styles.sectionTitle, { color: modalColors.titleText, fontSize: 18 * fontScale, textAlign: 'center', fontStyle: 'italic', fontWeight: 'regular' }]}>{selectedLe.articles[0]?.author}</Text>
                                                     <RenderHTML contentWidth={contentWidth} source={{ html: selectedLe.articles[0]?.content }} tagsStyles={tagsStyles} />
@@ -737,9 +825,9 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
                         </Modal>
 
                         <Modal animationType="slide" visible={quickUtilityHtmlModalVisible}>
-                            <View style={[styles.modalContainer, { paddingTop: insets.top, backgroundColor: modalColors.bg }]}> 
+                            <View style={[styles.modalContainer, { paddingTop: insets.top, backgroundColor: modalColors.bg }]}>
                                 <StatusBar barStyle={darkMode ? "light-content" : "dark-content"} />
-                                <View style={[styles.controlBar, { backgroundColor: modalColors.controlBg, borderBottomColor: modalColors.border }]}> 
+                                <View style={[styles.controlBar, { backgroundColor: modalColors.controlBg, borderBottomColor: modalColors.border }]}>
                                     <Text style={[styles.sectionTitle, { color: modalColors.title, fontSize: 18 }]}>{quickUtilityHtmlTitle}</Text>
                                     <TouchableOpacity onPress={() => setQuickUtilityHtmlModalVisible(false)} style={styles.closeButton}>
                                         <Text numberOfLines={1} style={[styles.closeButtonText, { color: modalColors.title }]}>✕ Đóng</Text>
@@ -809,7 +897,7 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         fontSize: 13,
     },
-    topRightColumn: { flex: 1, justifyContent: 'center', alignItems: 'flex-start', paddingLeft: 12,backgroundColor: 'rgba(255, 255, 255, 0)', paddingVertical: 6, borderRadius: 12 },
+    topRightColumn: { flex: 1, justifyContent: 'center', alignItems: 'flex-start', paddingLeft: 12, backgroundColor: 'rgba(255, 255, 255, 0)', paddingVertical: 6, borderRadius: 12 },
     dayNameText: { fontSize: 24, fontWeight: '900', color: '#c0392b', fontFamily: 'System', textTransform: 'uppercase' },
     mainDateContainer: { alignItems: 'center' },
     dayNumText: { fontSize: 100, fontWeight: '900', backgroundColor: 'rgba(255,255,255,0.8)', paddingHorizontal: 20, borderRadius: 20, },
@@ -1036,11 +1124,11 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     middleButton: {
-        
+
         borderRadius: 12,
         paddingVertical: 9,
         paddingHorizontal: 14,
-        width: '48%',
+        width: '100%',
         alignItems: 'center',
         justifyContent: 'center',
     },
