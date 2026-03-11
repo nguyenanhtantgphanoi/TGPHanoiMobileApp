@@ -23,6 +23,7 @@ const CARD_WIDTH = width - 32;
 const FEATURED_HEIGHT = 220;
 const NORMAL_IMAGE_HEIGHT = 200;
 const API_URL = 'https://mapp.tgphanoi.org/api/news/';
+const ANDROID_TOP_TAB_HEIGHT = 65;
 
 // --- TÁCH COMPONENT TIN NỔI BẬT ĐỂ TỐI ƯU ---
 const FeaturedSection = React.memo(({ data, renderItem }) => {
@@ -253,16 +254,18 @@ export default function NewsScreen({ navigation }) {
         }
     };
 
+    const androidTopSpacing = Platform.OS === 'android' ? ANDROID_TOP_TAB_HEIGHT + insets.top : insets.top;
+
     if (loading && page === 1) {
         return (
-            <View style={[styles.container, { paddingTop: Platform.OS === 'android' ? 0 : insets.top, justifyContent: 'center', alignItems: 'center' }]}>
+            <View style={[styles.container, { paddingTop: androidTopSpacing, justifyContent: 'center', alignItems: 'center' }]}> 
                 <ActivityIndicator size="large" color="#1e90ff" />
             </View>
         );
     }
 
     return (
-        <View style={[styles.container, { paddingTop: Platform.OS === 'android' ? 0 : insets.top }]}>
+        <View style={[styles.container, { paddingTop: androidTopSpacing }]}> 
             <StatusBar barStyle="dark-content" backgroundColor="#fff" />
             <View style={styles.fixedHeader}>
                 {/* <Text style={styles.headerTitle}>Tin Tức TGP Hà Nội</Text> */}
@@ -279,9 +282,11 @@ export default function NewsScreen({ navigation }) {
             <FlatList
                 ref={flatListRef}
                 data={news}
+                style={styles.newsList}
                 keyExtractor={(item) => `news-${item._id}`}
                 renderItem={renderNewsItem}
                 ListHeaderComponent={listHeader}
+                contentContainerStyle={[styles.newsListContent, { paddingBottom: Math.max(insets.bottom + 24, 24) }]}
                 refreshControl={
                     <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchNews(1); fetchFeaturedNews(); }} />
                 }
@@ -306,7 +311,7 @@ export default function NewsScreen({ navigation }) {
             />
 
             {showScrollTop && (
-                <TouchableOpacity style={styles.scrollTopButton} onPress={handleScrollToTop}>
+                <TouchableOpacity style={[styles.scrollTopButton, { bottom: Math.max(insets.bottom + 16, 30) }]} onPress={handleScrollToTop}>
                     <Ionicons name="arrow-up" size={24} color="#fff" />
                 </TouchableOpacity>
             )}
@@ -316,6 +321,8 @@ export default function NewsScreen({ navigation }) {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#fff' },
+    newsList: { flex: 1 },
+    newsListContent: { paddingBottom: 24 },
     fixedHeader: {
         height: 60,
         backgroundColor: '#fff',

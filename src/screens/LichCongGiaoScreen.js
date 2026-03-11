@@ -88,7 +88,7 @@ const DayCard = memo(({ item, insets, topNavigatorOffset, setSelectedLe, setModa
     const adjustedDayNameFontSize = Math.max(14, Math.round(dayNameFontSize * topRowScale));
     const adjustedMonthYearFontSize = Math.max(11, Math.round(monthYearFontSize * topRowScale));
     const adjustedLunarFontSize = Math.max(11, Math.round(lunarFontSize * topRowScale));
-    const bottomMargin = Math.max(15, middleBlockReservedSpace || 0);
+    const bottomMargin = Math.max(5, middleBlockReservedSpace || 0);
 
     const estimateTextHeight = (text, fontSize, lineHeight, maxWidth, avgCharWidthRatio = 0.52) => {
         const safeText = String(text || '').trim();
@@ -172,9 +172,9 @@ const DayCard = memo(({ item, insets, topNavigatorOffset, setSelectedLe, setModa
         return Math.min(maxPagerHeight, rawHeight);
     };
 
-    // Hàm đo chiều cao thực tế của từng trang trong PagerView
-    const onLayout = (pageIndex, event) => {
-        const { height: layoutHeight } = event.nativeEvent.layout;
+    // Measure page content so PagerView keeps a stable height and inner content can scroll if needed.
+    const onPageContentSizeChange = (pageIndex, contentSizeHeight) => {
+        const layoutHeight = Math.ceil(contentSizeHeight || 0);
         if (!layoutHeight) return;
 
         setPageContentHeights(prev => {
@@ -283,6 +283,7 @@ const DayCard = memo(({ item, insets, topNavigatorOffset, setSelectedLe, setModa
                     {
                         width: width - 30 > responsiveTopWidth ? responsiveTopWidth : width - 30,
                         marginBottom: bottomMargin,
+                        
                     },
                 ]}
             >
@@ -302,18 +303,22 @@ const DayCard = memo(({ item, insets, topNavigatorOffset, setSelectedLe, setModa
                         const isLeItemEmpty = !String(displayTitle || '').trim() && !displaySummary && !displayQuote;
 
                         if (isLeItemEmpty) {
-                            return <View key={`le-sub-item-${idx}`} onLayout={(event) => onLayout(idx, event)} style={{ height: 0 }} />;
+                            return <View key={`le-sub-item-${idx}`} style={{ height: 0 }} />;
                         }
 
                         return (
-                            <TouchableOpacity
+                            <ScrollView
                                 key={`le-sub-item-${idx}`}
-                                activeOpacity={0.9}
-                                onPress={() => { setSelectedLe(le); setModalVisible(true); }}
-                                onLayout={(event) => onLayout(idx, event)}
-                                style={[styles.lePage, { paddingBottom: isVeryShort ? 2 : 6, paddingHorizontal: isVerySmall ? 10 : 15 }]}
+                                style={styles.lePageScroll}
+                                nestedScrollEnabled
+                                showsVerticalScrollIndicator={false}
+                                onContentSizeChange={(_, heightValue) => onPageContentSizeChange(idx, heightValue)}
+                                contentContainerStyle={[styles.lePage, { paddingBottom: isVeryShort ? 2 : 6, paddingHorizontal: isVerySmall ? 10 : 15 }]}
                             >
-                                <View>
+                                <TouchableOpacity
+                                    activeOpacity={0.9}
+                                    onPress={() => { setSelectedLe(le); setModalVisible(true); }}
+                                >
                                     {!!String(displayTitle || '').trim() && (
                                         <Text style={[styles.titleText, { fontSize: scaledTitleFontSize, lineHeight: Math.round(scaledTitleFontSize * 1.2) }]}>{displayTitle}</Text>
                                     )}
@@ -333,8 +338,8 @@ const DayCard = memo(({ item, insets, topNavigatorOffset, setSelectedLe, setModa
                                             {displayQuote}
                                         </Text>
                                     )}
-                                </View>
-                            </TouchableOpacity>
+                                </TouchableOpacity>
+                            </ScrollView>
                         );
                     })}
                 </PagerView>
@@ -595,9 +600,11 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
     const currentDate = currentDay?.date ? new Date(currentDay.date) : null;
     const isCurrentDayToday = toDateKey(currentDay?.date) === toDateKey(new Date());
     const androidTopNavigatorOffset = Platform.OS === 'android' ? 65 + insets.top : 0;
-    const mainPagerHeight = Math.max(420, Math.floor(screenHeight * 0.74));
+    const mainPagerHeight = Platform.OS === 'android'
+        ? Math.max(500, Math.floor(screenHeight * 0.82))
+        : Math.max(420, Math.floor(screenHeight * 0.74));
 
-    const middleBlockReservedSpace = 20;
+    const middleBlockReservedSpace = 10;
     const middleButtonFontSize = screenHeight < 720 ? 12 : 13;
 
     const handleOpenQuickUtility = (item) => {
@@ -637,7 +644,7 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
             <ImageBackground source={require('../../assets/images/11.jpg')} style={styles.container}>
                 <ScrollView
                     style={styles.screenScroll}
-                    contentContainerStyle={styles.screenScrollContent}
+                    contentContainerStyle={[styles.screenScrollContent, { paddingBottom: Math.max(insets.bottom + 16, 16) }]}
                     showsVerticalScrollIndicator={false}
                 >
                         <PagerView
@@ -942,9 +949,10 @@ const styles = StyleSheet.create({
     lunarText: { fontSize: 18, color: "#fff" },
     lunarDateHighlight: { fontSize: 18, color: '#c0392b', fontWeight: 'bold' },
 
-    bottomBlock: { width: '100%', minHeight: 200, backgroundColor: 'rgba(250, 245, 220, 0.8)', paddingTop: 10, flexShrink: 0, borderBottomLeftRadius: 30, borderBottomRightRadius: 30, alignItems: 'center' },
+    bottomBlock: { width: '100%', minHeight: 200, backgroundColor: 'rgba(255, 255, 255, 0.8)', paddingTop: 10, flexShrink: 0, borderBottomLeftRadius: 30, borderBottomRightRadius: 30, alignItems: 'center' },
     // Bỏ height cố định để ưu tiên chiều cao động từ inline style
     pagerLe: { width: '100%' },
+    lePageScroll: { width: '100%' },
     lePage: { padding: 15, borderRadius: 16, justifyContent: 'flex-start' },
     titleText: { fontSize: 20, fontWeight: 'bold', textAlign: 'center', color: '#c0392b' },
     infoRow: { alignItems: 'center' },

@@ -9,10 +9,15 @@ import {
     Platform,
 } from "react-native";
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const ANDROID_TOP_TAB_HEIGHT = 65;
 
 export default function CacNghiThucScreen({ navigation }) {
     const [listKinhNguyen, setListKinhNguyen] = useState([])
     const [expandedId, setExpandedId] = useState(null)
+    const insets = useSafeAreaInsets();
+    const androidTopSpacing = Platform.OS === 'android' ? ANDROID_TOP_TAB_HEIGHT + insets.top + 15 : 60;
 
     useEffect(() => {
         const getListKinhnguyen = async () => {
@@ -32,7 +37,7 @@ export default function CacNghiThucScreen({ navigation }) {
         setExpandedId(expandedId === id ? null : id)
     };
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { paddingTop: androidTopSpacing }]}>
             <View style={styles.headerContainer}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <MaterialIcons name="arrow-back" size={24} color="#000" />
@@ -40,7 +45,8 @@ export default function CacNghiThucScreen({ navigation }) {
                 <Text style={styles.header}>Nghi Thức</Text>
             </View>
             <ScrollView
-                contentContainerStyle={styles.list}
+                style={styles.scrollView}
+                contentContainerStyle={[styles.list, { paddingBottom: Math.max(insets.bottom + 24, 32) }]}
                 showsVerticalScrollIndicator={false}
             >
                 {
@@ -105,7 +111,6 @@ export default function CacNghiThucScreen({ navigation }) {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        paddingTop: Platform.OS === 'android' ? 15 : 60,
         backgroundColor: "#c2850bde",
     },
 
@@ -129,7 +134,12 @@ const styles = StyleSheet.create({
     },
 
     list: {
+        flexGrow: 1,
         paddingBottom: 32,
+    },
+
+    scrollView: {
+        flex: 1,
     },
 
     card: {

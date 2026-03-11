@@ -8,6 +8,9 @@ import {
     Platform,
 } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const ANDROID_TOP_TAB_HEIGHT = 65;
 
 const menuItems = [
     {
@@ -54,6 +57,9 @@ const menuItems = [
 ];
 
 export default function ExtendScreen({ navigation }) {
+    const insets = useSafeAreaInsets();
+    const androidTopSpacing = Platform.OS === 'android' ? ANDROID_TOP_TAB_HEIGHT + insets.top + 15 : 60;
+
     const renderItem = ({ item }) => (
         <TouchableOpacity style={styles.item} activeOpacity={0.7} onPress={() => navigation.navigate(item.screen)}>
             <FontAwesome5 name={item.icon} size={20} color="black" style={styles.icon} />
@@ -62,13 +68,14 @@ export default function ExtendScreen({ navigation }) {
     );
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { paddingTop: androidTopSpacing }]}>
             <Text style={styles.header}>Menu</Text>
             <FlatList
                 data={menuItems}
                 keyExtractor={(item) => item.label}
                 renderItem={renderItem}
-                contentContainerStyle={styles.list}
+                style={styles.menuList}
+                contentContainerStyle={[styles.list, { paddingBottom: Math.max(insets.bottom + 20, 24) }]}
             />
         </View>
     );
@@ -77,7 +84,6 @@ export default function ExtendScreen({ navigation }) {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        paddingTop: Platform.OS === 'android' ? 15 : 60,
         backgroundColor: '#c2850bde',
     },
     header: {
@@ -88,7 +94,12 @@ const styles = StyleSheet.create({
         color: 'black',
     },
     list: {
+        flexGrow: 1,
         paddingHorizontal: 20,
+        paddingBottom: 24,
+    },
+    menuList: {
+        flex: 1,
     },
     item: {
         flexDirection: 'row',

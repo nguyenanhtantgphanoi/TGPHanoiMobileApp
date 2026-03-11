@@ -34,7 +34,7 @@ export const useUpdateVersion = () => {
     const checkUpdate = async () => {
         const bundle = await requestUpdateBundle();
         const currentVersion = await HotUpdate.getCurrentVersion();
-
+        console.log('Current bundle version:', currentVersion);
         if (bundle?.data?.length) {
             const [itemVersion] = bundle.data.filter(
                 (item) => item.enable,
@@ -73,7 +73,8 @@ export const useUpdateVersion = () => {
 
                 const currentVersion = version.split('.').map(Number);
                 const incomingVersion = res.data.version.split('.').map(Number);
-
+                console.log('Current app version:', currentVersion);
+                console.log('Incoming store version:', incomingVersion);
                 // So sánh version app với version store
                 for (let i = 0; i < 3; i++) {
                     if (currentVersion[i] < incomingVersion[i]) {
@@ -116,6 +117,10 @@ export const useUpdateVersion = () => {
             // Automatically check for updates when the app starts in production mode
             //   checkUpdate();
             compareVersion();
+        }else {
+            checkUpdate();
+            compareVersion();
+            console.log('Running in development mode, skipping update check.');
         }
     }, []);
 
