@@ -117,10 +117,6 @@ export const useUpdateVersion = () => {
             // Automatically check for updates when the app starts in production mode
             //   checkUpdate();
             compareVersion();
-        }else {
-            checkUpdate();
-            compareVersion();
-            console.log('Running in development mode, skipping update check.');
         }
     }, []);
 
