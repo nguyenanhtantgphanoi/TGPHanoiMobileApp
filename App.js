@@ -58,11 +58,33 @@ function MainApp() {
 
     if (data?.type === 'daily_reminder') {
       navigationRef.navigate(fallbackScreen, {
-        notification: {
-          type: data.type,
-          date: data?.date,
-          dateKey: data?.dateKey,
-          count: data?.count,
+        screen: 'Lịch',
+        params: {
+          notification: {
+            type: data.type,
+            date: data?.date,
+            dateKey: data?.dateKey,
+            count: data?.count,
+          },
+        },
+      });
+      return;
+    }
+    console.log('Notification data:', data);
+    if (data?.type === 'mass-readings' && targetScreen === 'Home') {
+      console.log('Navigating to Lịch with mass-readings data:', {
+        type: data.type,
+        date: data?.date,
+        dateKey: data?.dateKey,
+      });
+      navigationRef.navigate('HomeBottomTabNavigator', {
+        screen: 'Lịch',
+        params: {
+          notification: {
+            type: data.type,
+            date: data?.date,
+            dateKey: data?.dateKey,
+          },
         },
       });
       return;

@@ -22,7 +22,7 @@ import { Solar } from 'lunar-javascript';
 import renderAoLe from '../utils/renderAoLe';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import RenderHTML from "react-native-render-html";
-import { useIsFocused, useNavigation } from '@react-navigation/native';
+import { useIsFocused, useNavigation, useRoute } from '@react-navigation/native';
 import MonthCalendarModal from '../components/MonthCalendarModal';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -378,6 +378,7 @@ const DayCard = memo(({ item, insets, topNavigatorOffset, setSelectedLe, setModa
 
 const LichCongGiaoScreen = forwardRef((props, ref) => {
     const navigation = useNavigation();
+    const route = useRoute();
     const pagerRef = useRef(null);
     const insets = useSafeAreaInsets();
     const { width: contentWidth, height: screenHeight } = useWindowDimensions();
@@ -558,15 +559,90 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
         setCurrentDayIndex(initialIndex);
     }, [initialIndex]);
 
+    useEffect(() => {
+        if (!isFocused || loading) return;
+
+        const notification = route.params?.notification;
+        if (!notification?.type) return;
+
+        const parseTargetDate = () => {
+            if (typeof notification?.dateKey === 'string') {
+                const [y, m, d] = notification.dateKey.split('-').map(Number);
+                if (y && m && d) {
+                    const parsed = new Date(y, m - 1, d);
+                    if (!Number.isNaN(parsed.getTime())) return parsed;
+                }
+            }
+
+            const parsed = new Date(notification?.date);
+            if (!Number.isNaN(parsed.getTime())) return parsed;
+
+            return new Date();
+        };
+
+        const targetDate = parseTargetDate();
+
+        if (notification.type === 'daily_reminder') {
+            handleOpenMonthCalendar(targetDate);
+        }
+
+        if (notification.type === 'mass-readings') {
+            openMassReadingsModalForDate(targetDate);
+        }
+
+        navigation.setParams({ notification: undefined });
+    }, [route.params?.notification, isFocused, loading]);
+
     const handleDayPress = async (date) => {
         setClickedDate(date);
         setLoadingDay(true);
         try {
             const formattedDate = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
             const res = await axios.get(`https://mapp.tgphanoi.org/get-one-day?day=${formattedDate}`);
+            console.log('Fetched day data for', formattedDate, res.data);
             if (res.data) {
                 setFullDayData(res.data);
             }
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setLoadingDay(false);
+        }
+    };
+
+    const openMassReadingsModalForDate = async (date) => {
+        const targetDate = date instanceof Date ? date : new Date();
+        if (Number.isNaN(targetDate.getTime())) return;
+
+        const idx = GENERATED_MONTHS.findIndex(
+            m => m.month === targetDate.getMonth() && m.year === targetDate.getFullYear()
+        );
+        setMonthPagerIndex(idx !== -1 ? idx : 0);
+
+        setClickedDate(targetDate);
+        setLoadingDay(true);
+
+        try {
+            const formattedDate = `${targetDate.getFullYear()}-${targetDate.getMonth() + 1}-${targetDate.getDate()}`;
+            const res = await axios.get(`https://mapp.tgphanoi.org/get-one-day?day=${formattedDate}`);
+            const dayData = res.data;
+
+            if (!dayData) return;
+
+            setFullDayData(dayData);
+
+            const arr = Array.isArray(dayData.arr_cac_le) ? dayData.arr_cac_le : [];
+            const firstLe = arr.length > 0
+                ? {
+                    ...arr[0],
+                    bd_1: dayData.bd_1 || arr[0].bd_1,
+                    bd_2: dayData.bd_2 || arr[0].bd_2,
+                    tin_mung: dayData.tin_mung || arr[0].tin_mung,
+                }
+                : dayData;
+
+            setSelectedLe(firstLe);
+            setModalVisible(true);
         } catch (error) {
             console.error(error);
         } finally {

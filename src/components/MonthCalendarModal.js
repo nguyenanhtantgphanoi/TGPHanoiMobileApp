@@ -256,7 +256,7 @@ const MonthCalendarModal = ({
             // Tạo thời điểm thông báo: 18:31 ngày hôm trước
             const notificationTime = new Date(eventDate);
             notificationTime.setDate(notificationTime.getDate() - 1); // Ngày hôm trước
-            notificationTime.setHours(21, 0, 0, 0);
+            notificationTime.setHours(18, 30, 0, 0);
 
             // Kiểm tra nếu thời gian trong quá khứ thì không schedule
             if (notificationTime <= new Date()) {
