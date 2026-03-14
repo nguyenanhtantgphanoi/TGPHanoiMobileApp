@@ -1,6 +1,7 @@
 import './src/utils/notificationConfig';
 
 import { useEffect, useRef } from 'react';
+import { Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
@@ -51,6 +52,33 @@ function MainApp() {
   const navigationRef = useNavigationContainerRef();
   const handledResponseIdsRef = useRef(new Set());
 
+  const isForCurrentOS = (data = {}) => {
+    const currentOS = Platform.OS;
+    const rawTargetOS = data?.os ?? data?.platform ?? data?.targetOs ?? 'all';
+
+    if (Array.isArray(rawTargetOS)) {
+      const normalized = rawTargetOS.map((item) => String(item || '').trim().toLowerCase());
+      if (normalized.length === 0) return true;
+      if (normalized.includes('all') || normalized.includes('*') || normalized.includes('both')) return true;
+      return normalized.includes(currentOS);
+    }
+
+    const targetOS = String(rawTargetOS || 'all').trim().toLowerCase();
+    if (!targetOS || targetOS === 'all' || targetOS === '*' || targetOS === 'both') return true;
+
+    const splitTargets = targetOS
+      .split(/[\s,|/]+/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+    if (splitTargets.length > 1) {
+      if (splitTargets.includes('all') || splitTargets.includes('*') || splitTargets.includes('both')) return true;
+      return splitTargets.includes(currentOS);
+    }
+
+    return targetOS === currentOS;
+  };
+
   const navigateFromNotificationData = (data = {}) => {
     if (!navigationRef.isReady()) return;
 
@@ -75,6 +103,8 @@ function MainApp() {
 
     if (requestId && handledResponseIdsRef.current.has(requestId)) return;
     if (requestId) handledResponseIdsRef.current.add(requestId);
+
+    if (!isForCurrentOS(data)) return;
 
     const tryNavigate = () => {
       if (navigationRef.isReady()) {
