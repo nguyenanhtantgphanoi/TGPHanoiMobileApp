@@ -25,6 +25,7 @@ import LichLeNoiThanhScreen from './src/screens/LichLeNoiThanhScreen';
 import VPCacUyBanScreen from './src/screens/VPCacUyBanScreen';
 import NewsDetailScreen from './src/screens/NewsDetailScreen';
 import GKPVScreen from './src/screens/GKPVScreen';
+import NotificationScreen from './src/screens/NotificationScreen';
 import { useUpdateVersion } from './src/hooks/useUpdateVersion';
 import { UpdateOverlay } from './src/components/UpdateOverlay';
 
@@ -43,6 +44,7 @@ const VALID_STACK_SCREENS = new Set([
   'ChiTietKinh',
   'VanKienCongNghiScreen',
   'GKPVScreen',
+  'NotificationScreen',
 ]);
 
 function MainApp() {
@@ -50,66 +52,26 @@ function MainApp() {
   const handledResponseIdsRef = useRef(new Set());
 
   const navigateFromNotificationData = (data = {}) => {
-    const fallbackScreen = 'HomeBottomTabNavigator';
-    const targetScreen = typeof data.screen === 'string' ? data.screen : null;
-    const params = data?.params && typeof data.params === 'object' ? data.params : {};
-
     if (!navigationRef.isReady()) return;
 
-    if (data?.type === 'daily_reminder') {
-      navigationRef.navigate(fallbackScreen, {
-        screen: 'Lịch',
-        params: {
-          notification: {
-            type: data.type,
-            date: data?.date,
-            dateKey: data?.dateKey,
-            count: data?.count,
-          },
-        },
-      });
-      return;
-    }
-    console.log('Notification data:', data);
-    if (data?.type === 'mass-readings' && targetScreen === 'Home') {
-      console.log('Navigating to Lịch with mass-readings data:', {
-        type: data.type,
-        date: data?.date,
-        dateKey: data?.dateKey,
-      });
-      navigationRef.navigate('HomeBottomTabNavigator', {
-        screen: 'Lịch',
-        params: {
-          notification: {
-            type: data.type,
-            date: data?.date,
-            dateKey: data?.dateKey,
-          },
-        },
-      });
-      return;
-    }
-
-    if (targetScreen === 'NewsDetailScreen' && data?.link) {
-      navigationRef.navigate('NewsDetailScreen', {
-        link: data.link,
-        postId: data?.postId,
-      });
-      return;
-    }
-
-    if (targetScreen && VALID_STACK_SCREENS.has(targetScreen)) {
-      navigationRef.navigate(targetScreen, params);
-      return;
-    }
-
-    navigationRef.navigate(fallbackScreen);
+    navigationRef.navigate('NotificationScreen', {
+      notification: {
+        title: data?._title,
+        body: data?._body,
+        data,
+      },
+    });
   };
 
   const handleNotificationResponse = (response) => {
     const request = response?.notification?.request;
     const requestId = request?.identifier;
-    const data = request?.content?.data || {};
+    const content = request?.content || {};
+    const data = {
+      ...(content?.data || {}),
+      _title: content?.title,
+      _body: content?.body,
+    };
 
     if (requestId && handledResponseIdsRef.current.has(requestId)) return;
     if (requestId) handledResponseIdsRef.current.add(requestId);
@@ -188,6 +150,7 @@ function MainApp() {
         <Stack.Screen name="ChiTietKinh" component={ChiTietKinhScreen} />
         <Stack.Screen name="VanKienCongNghiScreen" component={VanKienCongNghiScreen} />
         <Stack.Screen name="GKPVScreen" component={GKPVScreen} />
+        <Stack.Screen name="NotificationScreen" component={NotificationScreen} />
 
 
       </Stack.Navigator>
