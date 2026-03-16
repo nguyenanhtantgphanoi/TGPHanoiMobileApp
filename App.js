@@ -1,7 +1,6 @@
 import './src/utils/notificationConfig';
 
 import { useEffect, useRef } from 'react';
-import { Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
@@ -52,37 +51,60 @@ function MainApp() {
   const navigationRef = useNavigationContainerRef();
   const handledResponseIdsRef = useRef(new Set());
 
-  const isForCurrentOS = (data = {}) => {
-    const currentOS = Platform.OS;
-    const rawTargetOS = data?.os ?? data?.platform ?? data?.targetOs ?? 'all';
-
-    if (Array.isArray(rawTargetOS)) {
-      const normalized = rawTargetOS.map((item) => String(item || '').trim().toLowerCase());
-      if (normalized.length === 0) return true;
-      if (normalized.includes('all') || normalized.includes('*') || normalized.includes('both')) return true;
-      return normalized.includes(currentOS);
-    }
-
-    const targetOS = String(rawTargetOS || 'all').trim().toLowerCase();
-    if (!targetOS || targetOS === 'all' || targetOS === '*' || targetOS === 'both') return true;
-
-    const splitTargets = targetOS
-      .split(/[\s,|/]+/)
-      .map((item) => item.trim())
-      .filter(Boolean);
-
-    if (splitTargets.length > 1) {
-      if (splitTargets.includes('all') || splitTargets.includes('*') || splitTargets.includes('both')) return true;
-      return splitTargets.includes(currentOS);
-    }
-
-    return targetOS === currentOS;
-  };
-
   const navigateFromNotificationData = (data = {}) => {
+    const fallbackScreen = 'NotificationScreen';
+    const targetScreen = typeof data.screen === 'string' ? data.screen : null;
+    const params = data?.params && typeof data.params === 'object' ? data.params : {};
+
     if (!navigationRef.isReady()) return;
 
-    navigationRef.navigate('NotificationScreen', {
+    if (data?.type === 'daily_reminder') {
+      navigationRef.navigate('HomeBottomTabNavigator', {
+        screen: 'Lịch',
+        params: {
+          notification: {
+            type: data.type,
+            date: data?.date,
+            dateKey: data?.dateKey,
+            count: data?.count,
+          },
+        },
+      });
+      return;
+    }
+
+    if (
+      data?.type === 'mass-readings' &&
+      (targetScreen === 'HomeBottomTabNavigator' || targetScreen === 'Home')
+    ) {
+      navigationRef.navigate('HomeBottomTabNavigator', {
+        screen: 'Lịch',
+        params: {
+          notification: {
+            type: data.type,
+            date: data?.date,
+            dateKey: data?.dateKey,
+            count: data?.count,
+          },
+        },
+      });
+      return;
+    }
+
+    if (targetScreen === 'NewsDetailScreen' && data?.link) {
+      navigationRef.navigate('NewsDetailScreen', {
+        link: data.link,
+        postId: data?.postId,
+      });
+      return;
+    }
+
+    if (targetScreen && VALID_STACK_SCREENS.has(targetScreen)) {
+      navigationRef.navigate(targetScreen, params);
+      return;
+    }
+
+    navigationRef.navigate(fallbackScreen, {
       notification: {
         title: data?._title,
         body: data?._body,
@@ -103,8 +125,6 @@ function MainApp() {
 
     if (requestId && handledResponseIdsRef.current.has(requestId)) return;
     if (requestId) handledResponseIdsRef.current.add(requestId);
-
-    if (!isForCurrentOS(data)) return;
 
     const tryNavigate = () => {
       if (navigationRef.isReady()) {

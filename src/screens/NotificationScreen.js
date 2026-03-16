@@ -41,29 +41,11 @@ export default function NotificationScreen({ route, navigation }) {
             marginBottom: 10,
         },
         body: {
-            color: '#271116',
+            color: '#111827',
         },
         b: {
             fontWeight: '700',
-        },
-        i: {
-            fontStyle: 'italic',
-        },
-        strong: {
-            fontWeight: '700',
-        },
-        em: {
-            fontStyle: 'italic',
-        },
-        red: {
-            color: '#dc2626',
-        },
-        blue: {
-            color: '#2563eb',
-        },
-        green: {
-            color: '#16a34a',
-        },
+        },             
     }), []);
 
     return (
