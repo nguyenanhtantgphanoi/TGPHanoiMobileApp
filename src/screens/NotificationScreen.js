@@ -45,7 +45,16 @@ export default function NotificationScreen({ route, navigation }) {
         },
         b: {
             fontWeight: '700',
-        },             
+        },  
+        strong: {
+            fontWeight: '700',
+        },  
+            i: {
+            fontStyle: 'italic',
+        },
+        em: {
+            fontStyle: 'italic',
+        },           
     }), []);
 
     return (
@@ -66,6 +75,11 @@ export default function NotificationScreen({ route, navigation }) {
                         contentWidth={width - 56}
                         source={{ html: htmlBody }}
                         tagsStyles={tagsStyles}
+                        classesStyles={{
+                            red: { color: 'red' },
+                            blue: { color: 'blue' },
+                            green: { color: 'green' },
+                        }}
                     />
                 </View>
 
