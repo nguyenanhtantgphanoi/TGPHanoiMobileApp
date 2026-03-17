@@ -30,6 +30,9 @@ const { width, height } = Dimensions.get('window');
 const FONT_SCALE_KEY = "@kinh_font_scale";
 const DARK_MODE_KEY = "@kinh_dark_mode";
 const UTILITY_SWIPE_HINT_SEEN_KEY = "@utility_swipe_hint_seen";
+const DAYCARD_CACHE_KEY = "@lich_cong_giao_daycard_cache";
+const CALENDAR_YEAR_CACHE_KEY = "@lich_cong_giao_calendar_year_cache";
+const DAYCARD_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const QUICK_UTILITY_API_URL = 'https://mapp.tgphanoi.org/get-quick-utilities-v2';
 const DEFAULT_ACTION_BUTTON_COLORS = {
     cgkpv: '#c0392b',
@@ -416,22 +419,119 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
 
     useEffect(() => { if (isFocused || modalVisible) syncSettings(); }, [isFocused, modalVisible]);
 
-    const fetchData = async () => {
+    const buildDayCardStateFromDays = (days) => {
+        const today = new Date();
+        const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        const idx = days.findIndex(d => d.date === todayKey);
+
+        setAllDays(days);
+        setInitialIndex(idx !== -1 ? idx : 0);
+    };
+
+    const readDayCardCache = async () => {
         try {
-            const today = new Date();
-            const res = await axios.get(`https://mapp.tgphanoi.org/get-calendar?date=${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`);
-            const data = [...(res.data.prev_month || []), ...(res.data.cur_month || []), ...(res.data.next_month || [])];
-            const idx = data.findIndex(d => d.date === `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`);
-            setAllDays(data);
-            setInitialIndex(idx !== -1 ? idx : 0);
+            const raw = await AsyncStorage.getItem(DAYCARD_CACHE_KEY);
+            if (!raw) return null;
+
+            const parsed = JSON.parse(raw);
+            if (!parsed || !Array.isArray(parsed.days) || !parsed.cachedAt) {
+                return null;
+            }
+
+            const ageMs = Date.now() - Number(parsed.cachedAt);
+            return {
+                days: parsed.days,
+                isExpired: Number.isNaN(ageMs) || ageMs >= DAYCARD_CACHE_TTL_MS,
+            };
+        } catch {
+            return null;
+        }
+    };
+
+    const writeDayCardCache = async (days) => {
+        try {
+            await AsyncStorage.setItem(
+                DAYCARD_CACHE_KEY,
+                JSON.stringify({
+                    cachedAt: Date.now(),
+                    days,
+                })
+            );
+        } catch { }
+    };
+
+    const fetchDayCardDaysFromApi = async () => {
+        const today = new Date();
+        const res = await axios.get(`https://mapp.tgphanoi.org/get-calendar?date=${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`);
+        return [...(res.data.prev_month || []), ...(res.data.cur_month || []), ...(res.data.next_month || [])];
+    };
+
+    const fetchData = async () => {
+        let usedValidCache = false;
+
+        try {
+            const cache = await readDayCardCache();
+
+            if (cache?.days?.length && !cache.isExpired) {
+                buildDayCardStateFromDays(cache.days);
+                usedValidCache = true;
+            }
+
+            if (cache?.isExpired) {
+                await AsyncStorage.removeItem(DAYCARD_CACHE_KEY);
+            }
+
+            if (!usedValidCache) {
+                const days = await fetchDayCardDaysFromApi();
+                await AsyncStorage.removeItem(DAYCARD_CACHE_KEY);
+                await writeDayCardCache(days);
+                buildDayCardStateFromDays(days);
+            }
+
             setLoading(false);
-        } catch { setLoading(false); }
+        } catch {
+            if (!usedValidCache) {
+                setAllDays([]);
+            }
+            setLoading(false);
+        }
     };
 
     const fetchYearData = async () => {
+        let usedValidCache = false;
+
         try {
+            const rawCache = await AsyncStorage.getItem(CALENDAR_YEAR_CACHE_KEY);
+            if (rawCache) {
+                const parsed = JSON.parse(rawCache);
+                const cachedData = Array.isArray(parsed?.data) ? parsed.data : null;
+                const ageMs = Date.now() - Number(parsed?.cachedAt);
+                const isExpired = Number.isNaN(ageMs) || ageMs >= DAYCARD_CACHE_TTL_MS;
+
+                if (cachedData?.length && !isExpired) {
+                    setYearData(cachedData);
+                    usedValidCache = true;
+                }
+
+                if (isExpired) {
+                    await AsyncStorage.removeItem(CALENDAR_YEAR_CACHE_KEY);
+                }
+            }
+
+            if (usedValidCache) return;
+
             const res = await axios.get('https://mapp.tgphanoi.org/get-calendar-year');
-            if (Array.isArray(res.data)) setYearData(res.data);
+            if (Array.isArray(res.data)) {
+                setYearData(res.data);
+                await AsyncStorage.removeItem(CALENDAR_YEAR_CACHE_KEY);
+                await AsyncStorage.setItem(
+                    CALENDAR_YEAR_CACHE_KEY,
+                    JSON.stringify({
+                        cachedAt: Date.now(),
+                        data: res.data,
+                    })
+                );
+            }
         } catch { }
     };
 
