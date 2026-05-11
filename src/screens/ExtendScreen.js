@@ -48,11 +48,11 @@ const menuItems = [
         label: 'VP các Ủy Ban',
         screen: 'VPCacUyBanScreen'
     },
-    // {
-    //     icon: 'cog',
-    //     label: 'Cài đặt',
-    //     screen: 'SettingScreen'
-    // },
+    {
+        icon: 'cog',
+        label: 'Cài đặt',
+        screen: 'SettingScreen'
+    },
 
 ];
 

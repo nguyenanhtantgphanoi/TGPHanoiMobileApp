@@ -26,6 +26,7 @@ import VPCacUyBanScreen from './src/screens/VPCacUyBanScreen';
 import NewsDetailScreen from './src/screens/NewsDetailScreen';
 import GKPVScreen from './src/screens/GKPVScreen';
 import NotificationScreen from './src/screens/NotificationScreen';
+import SettingScreen from './src/screens/SettingScreen';
 import { useUpdateVersion } from './src/hooks/useUpdateVersion';
 import { UpdateOverlay } from './src/components/UpdateOverlay';
 
@@ -45,6 +46,7 @@ const VALID_STACK_SCREENS = new Set([
   'VanKienCongNghiScreen',
   'GKPVScreen',
   'NotificationScreen',
+  'SettingScreen',
 ]);
 
 function MainApp() {
@@ -201,6 +203,7 @@ function MainApp() {
         <Stack.Screen name="VanKienCongNghiScreen" component={VanKienCongNghiScreen} />
         <Stack.Screen name="GKPVScreen" component={GKPVScreen} />
         <Stack.Screen name="NotificationScreen" component={NotificationScreen} />
+        <Stack.Screen name="SettingScreen" component={SettingScreen} />
 
 
       </Stack.Navigator>

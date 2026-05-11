@@ -30,10 +30,12 @@ const { width, height } = Dimensions.get('window');
 const FONT_SCALE_KEY = "@kinh_font_scale";
 const DARK_MODE_KEY = "@kinh_dark_mode";
 const UTILITY_SWIPE_HINT_SEEN_KEY = "@utility_swipe_hint_seen";
-const DAYCARD_CACHE_KEY = "@lich_cong_giao_daycard_cache";
+const DAYCARD_CACHE_KEY_PREFIX = "@lich_cong_giao_daycard_cache:";
 const CALENDAR_YEAR_CACHE_KEY = "@lich_cong_giao_calendar_year_cache";
-const DAYCARD_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+const DAYCARD_CACHE_TTL_MS = 50*24 * 60 * 60 * 1000;
+const BACKGROUND_DAYCARD_OFFSETS = [-6, -5, -4, -3, -2, -1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
 const QUICK_UTILITY_API_URL = 'https://mapp.tgphanoi.org/get-quick-utilities-v2';
+const LICH_CONG_GIAO_UPDATED_AT_API_URL = 'https://mapp.tgphanoi.org/get-lich-cong-giao-updated-at';
 const DEFAULT_ACTION_BUTTON_COLORS = {
     cgkpv: '#c0392b',
     reading: '#8e44ad',
@@ -406,6 +408,7 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
     const [quickUtilityHtmlTitle, setQuickUtilityHtmlTitle] = useState('Tiện ích');
     const [quickUtilityHtmlContent, setQuickUtilityHtmlContent] = useState('');
     const [showUtilitySwipeHint, setShowUtilitySwipeHint] = useState(false);
+    const updatedAtCheckedDayKeysRef = useRef(new Set());
 
     useImperativeHandle(ref, () => ({ goToToday: () => pagerRef.current?.setPage(initialIndex) }));
     const syncSettings = async () => {
@@ -419,28 +422,79 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
 
     useEffect(() => { if (isFocused || modalVisible) syncSettings(); }, [isFocused, modalVisible]);
 
+    const formatDateKey = (date) => {
+        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    };
+
+    const toDateKeyValue = (value) => {
+        const dateValue = value instanceof Date ? value : new Date(value);
+        if (Number.isNaN(dateValue.getTime())) return '';
+        return formatDateKey(dateValue);
+    };
+
+    const normalizeDayData = (dayData, fallbackDayKey = '') => {
+        if (!dayData || typeof dayData !== 'object') return null;
+
+        const resolvedDate =
+            toDateKeyValue(dayData.date) ||
+            toDateKeyValue(dayData.day) ||
+            toDateKeyValue(dayData.ngay) ||
+            fallbackDayKey;
+
+        if (!resolvedDate) return null;
+
+        return {
+            ...dayData,
+            date: resolvedDate,
+        };
+    };
+
+    const mergeAndSortDays = (baseDays, incomingDays) => {
+        const mergedMap = new Map();
+
+        [...(baseDays || []), ...(incomingDays || [])].forEach((day) => {
+            const normalized = normalizeDayData(day);
+            if (!normalized) return;
+            mergedMap.set(normalized.date, normalized);
+        });
+
+        return Array.from(mergedMap.values()).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    };
+
     const buildDayCardStateFromDays = (days) => {
         const today = new Date();
-        const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        const todayKey = formatDateKey(today);
         const idx = days.findIndex(d => d.date === todayKey);
 
         setAllDays(days);
         setInitialIndex(idx !== -1 ? idx : 0);
     };
 
-    const readDayCardCache = async () => {
+    const buildDayCardCacheKey = (dayKey) => `${DAYCARD_CACHE_KEY_PREFIX}${dayKey}`;
+
+    const readCachedDay = async (dayKey) => {
         try {
-            const raw = await AsyncStorage.getItem(DAYCARD_CACHE_KEY);
+            const raw = await AsyncStorage.getItem(buildDayCardCacheKey(dayKey));
             if (!raw) return null;
 
             const parsed = JSON.parse(raw);
-            if (!parsed || !Array.isArray(parsed.days) || !parsed.cachedAt) {
+            if (!parsed || !parsed.cachedAt || !parsed.dayData) {
                 return null;
             }
 
             const ageMs = Date.now() - Number(parsed.cachedAt);
+            const normalizedDay = normalizeDayData(parsed.dayData, dayKey);
+            if (!normalizedDay) return null;
+
+            const cachedUpdatedAt =
+                parsed.updatedAt ??
+                normalizedDay.updatedAt ??
+                normalizedDay.updated_at ??
+                '';
+
             return {
-                days: parsed.days,
+                dayData: normalizedDay,
+                cachedUpdatedAt: cachedUpdatedAt ? String(cachedUpdatedAt) : '',
                 isExpired: Number.isNaN(ageMs) || ageMs >= DAYCARD_CACHE_TTL_MS,
             };
         } catch {
@@ -448,51 +502,171 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
         }
     };
 
-    const writeDayCardCache = async (days) => {
+    const writeCachedDay = async (dayKey, dayData) => {
         try {
+            const normalizedDay = normalizeDayData(dayData, dayKey);
+            if (!normalizedDay) return;
+
+            const nextUpdatedAt =
+                normalizedDay.updatedAt ??
+                normalizedDay.updated_at ??
+                '';
+
             await AsyncStorage.setItem(
-                DAYCARD_CACHE_KEY,
+                buildDayCardCacheKey(dayKey),
                 JSON.stringify({
                     cachedAt: Date.now(),
-                    days,
+                    updatedAt: nextUpdatedAt ? String(nextUpdatedAt) : '',
+                    dayData: normalizedDay,
                 })
             );
         } catch { }
     };
 
-    const fetchDayCardDaysFromApi = async () => {
+    const extractUpdatedAtValue = (payload) => {
+        if (!payload) return '';
+        const direct = payload.updatedAt ?? payload.updated_at;
+        if (direct !== undefined && direct !== null && String(direct).trim()) {
+            return String(direct).trim();
+        }
+
+        const nested = payload.data?.updatedAt ?? payload.data?.updated_at;
+        if (nested !== undefined && nested !== null && String(nested).trim()) {
+            return String(nested).trim();
+        }
+
+        if (typeof payload === 'string' && payload.trim()) {
+            return payload.trim();
+        }
+
+        return '';
+    };
+
+    const refreshCachedDayIfStale = async (dayKey, cachedUpdatedAt = '') => {
+        if (!dayKey || updatedAtCheckedDayKeysRef.current.has(dayKey)) {
+            return;
+        }
+
+        // Limit updated-at validation to once per day key per app launch.
+        updatedAtCheckedDayKeysRef.current.add(dayKey);
+
+        try {
+            const res = await axios.get(LICH_CONG_GIAO_UPDATED_AT_API_URL, {
+                params: { date: dayKey },
+            });
+            const remoteUpdatedAt = extractUpdatedAtValue(res.data);
+            const localUpdatedAt = String(cachedUpdatedAt || '').trim();
+
+            if (!remoteUpdatedAt || remoteUpdatedAt === localUpdatedAt) {
+                return;
+            }
+
+            const refreshedDay = await fetchOneDayFromApi(dayKey);
+            if (refreshedDay) {
+                setAllDays(prevDays => mergeAndSortDays(prevDays, [refreshedDay]));
+            }
+        } catch { }
+    };
+
+    const fetchOneDayFromApi = async (dayKey) => {
+        const res = await axios.get(`https://mapp.tgphanoi.org/get-one-day?day=${dayKey}`);
+        const normalizedDay = normalizeDayData(res.data, dayKey);
+        if (!normalizedDay) return null;
+        await writeCachedDay(dayKey, normalizedDay);
+        return normalizedDay;
+    };
+
+    const getDayFromCacheOrApi = async (dayKey) => {
+        const cached = await readCachedDay(dayKey);
+
+        if (cached?.dayData && !cached.isExpired) {
+            refreshCachedDayIfStale(dayKey, cached.cachedUpdatedAt).catch(() => { });
+            return cached.dayData;
+        }
+
+        if (cached?.isExpired) {
+            await AsyncStorage.removeItem(buildDayCardCacheKey(dayKey));
+        }
+
+        try {
+            return await fetchOneDayFromApi(dayKey);
+        } catch {
+            return cached?.dayData || null;
+        }
+    };
+
+    const preloadOtherDaysInBackground = async (currentDayData) => {
         const today = new Date();
-        const res = await axios.get(`https://mapp.tgphanoi.org/get-calendar?date=${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`);
-        return [...(res.data.prev_month || []), ...(res.data.cur_month || []), ...(res.data.next_month || [])];
+        const offsets = BACKGROUND_DAYCARD_OFFSETS;
+
+        const dayKeys = offsets.map((offset) => {
+            const targetDate = new Date(today);
+            targetDate.setDate(today.getDate() + offset);
+            return formatDateKey(targetDate);
+        });
+
+        const cachedEntries = await Promise.all(dayKeys.map(dayKey => readCachedDay(dayKey)));
+
+        const expiredKeys = dayKeys.filter((_, index) => cachedEntries[index]?.isExpired);
+        if (expiredKeys.length > 0) {
+            await Promise.all(expiredKeys.map(dayKey => AsyncStorage.removeItem(buildDayCardCacheKey(dayKey))));
+        }
+
+        const cachedDays = cachedEntries
+            .filter(entry => entry?.dayData && !entry.isExpired)
+            .map(entry => entry.dayData);
+
+        const validCacheChecks = dayKeys
+            .map((dayKey, index) => ({ dayKey, entry: cachedEntries[index] }))
+            .filter(({ entry }) => entry?.dayData && !entry.isExpired);
+
+        validCacheChecks.forEach(({ dayKey, entry }) => {
+            refreshCachedDayIfStale(dayKey, entry.cachedUpdatedAt).catch(() => { });
+        });
+
+        if (cachedDays.length > 0) {
+            setAllDays(prevDays => mergeAndSortDays(prevDays, cachedDays));
+        }
+
+        const keysToFetch = dayKeys.filter((_, index) => {
+            const entry = cachedEntries[index];
+            return !(entry?.dayData && !entry.isExpired);
+        });
+
+        if (keysToFetch.length === 0) {
+            const mergedDays = mergeAndSortDays(currentDayData ? [currentDayData] : [], cachedDays);
+            if (mergedDays.length > 0) buildDayCardStateFromDays(mergedDays);
+            return;
+        }
+
+        const settled = await Promise.allSettled(keysToFetch.map(dayKey => fetchOneDayFromApi(dayKey)));
+
+        const fetchedDays = settled
+            .filter(result => result.status === 'fulfilled' && result.value)
+            .map(result => result.value)
+            .filter(Boolean);
+
+        const mergedDays = mergeAndSortDays(currentDayData ? [currentDayData] : [], [...cachedDays, ...fetchedDays]);
+        if (mergedDays.length > 0) {
+            buildDayCardStateFromDays(mergedDays);
+        }
     };
 
     const fetchData = async () => {
-        let usedValidCache = false;
-
         try {
-            const cache = await readDayCardCache();
+            const todayKey = formatDateKey(new Date());
+            const todayDay = await getDayFromCacheOrApi(todayKey);
 
-            if (cache?.days?.length && !cache.isExpired) {
-                buildDayCardStateFromDays(cache.days);
-                usedValidCache = true;
-            }
-
-            if (cache?.isExpired) {
-                await AsyncStorage.removeItem(DAYCARD_CACHE_KEY);
-            }
-
-            if (!usedValidCache) {
-                const days = await fetchDayCardDaysFromApi();
-                await AsyncStorage.removeItem(DAYCARD_CACHE_KEY);
-                await writeDayCardCache(days);
-                buildDayCardStateFromDays(days);
+            if (todayDay) {
+                buildDayCardStateFromDays([todayDay]);
+            } else {
+                setAllDays([]);
             }
 
             setLoading(false);
+            preloadOtherDaysInBackground(todayDay || null).catch(() => { });
         } catch {
-            if (!usedValidCache) {
-                setAllDays([]);
-            }
+            setAllDays([]);
             setLoading(false);
         }
     };
