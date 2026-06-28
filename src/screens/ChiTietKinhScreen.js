@@ -498,7 +498,8 @@ export default function ChiTietKinhScreen({ route, navigation }) {
                         tagsStyles={tagsStyles}
                         classesStyles={classesStyles}
                         baseStyle={{ color: colors.text, backgroundColor: colors.bg }}
-                        defaultTextProps={{ selectable: true }}
+                        defaultTextProps={{ selectable: true, selectionColor: '#facc15' }}
+                        renderersProps={{ text: { selectable: true, selectionColor: '#facc15' } }}
                     />
                 </View>
             </ScrollView>

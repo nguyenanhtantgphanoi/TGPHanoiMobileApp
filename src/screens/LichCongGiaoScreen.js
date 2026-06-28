@@ -409,8 +409,33 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
     const [quickUtilityHtmlContent, setQuickUtilityHtmlContent] = useState('');
     const [showUtilitySwipeHint, setShowUtilitySwipeHint] = useState(false);
     const updatedAtCheckedDayKeysRef = useRef(new Set());
+    const hasUserDraggedPagerRef = useRef(false);
+    const currentDayKeyRef = useRef('');
 
-    useImperativeHandle(ref, () => ({ goToToday: () => pagerRef.current?.setPage(initialIndex) }));
+    function goToTodayFromState(animated = false) {
+        const todayKey = formatDateKey(new Date());
+        const todayIdx = allDays.findIndex(day => toDateKeyValue(day?.date) === todayKey);
+        const targetIndex = todayIdx !== -1 ? todayIdx : initialIndex;
+
+        if (targetIndex < 0) return;
+
+        if (animated) {
+            pagerRef.current?.setPage(targetIndex);
+        } else if (pagerRef.current?.setPageWithoutAnimation) {
+            pagerRef.current.setPageWithoutAnimation(targetIndex);
+        } else {
+            pagerRef.current?.setPage(targetIndex);
+        }
+
+        setCurrentDayIndex(targetIndex);
+
+        if (todayIdx !== -1) {
+            setInitialIndex(todayIdx);
+            currentDayKeyRef.current = todayKey;
+        }
+    }
+
+    useImperativeHandle(ref, () => ({ goToToday: () => goToTodayFromState() }));
     const syncSettings = async () => {
         try {
             const savedFont = await AsyncStorage.getItem(FONT_SCALE_KEY);
@@ -427,6 +452,13 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
     };
 
     const toDateKeyValue = (value) => {
+        if (typeof value === 'string') {
+            const trimmed = value.trim();
+            if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+                return trimmed;
+            }
+        }
+
         const dateValue = value instanceof Date ? value : new Date(value);
         if (Number.isNaN(dateValue.getTime())) return '';
         return formatDateKey(dateValue);
@@ -468,6 +500,7 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
 
         setAllDays(days);
         setInitialIndex(idx !== -1 ? idx : 0);
+        currentDayKeyRef.current = idx !== -1 ? todayKey : (days[0]?.date || '');
     };
 
     const buildDayCardCacheKey = (dayKey) => `${DAYCARD_CACHE_KEY_PREFIX}${dayKey}`;
@@ -625,7 +658,10 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
         });
 
         if (cachedDays.length > 0) {
-            setAllDays(prevDays => mergeAndSortDays(prevDays, cachedDays));
+            const mergedFromCache = mergeAndSortDays(currentDayData ? [currentDayData] : [], cachedDays);
+            if (mergedFromCache.length > 0) {
+                buildDayCardStateFromDays(mergedFromCache);
+            }
         }
 
         const keysToFetch = dayKeys.filter((_, index) => {
@@ -664,7 +700,8 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
             }
 
             setLoading(false);
-            preloadOtherDaysInBackground(todayDay || null).catch(() => { });
+            preloadOtherDaysInBackground(todayDay || null)
+                .catch(() => { });
         } catch {
             setAllDays([]);
             setLoading(false);
@@ -830,8 +867,30 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
     }, []);
 
     useEffect(() => {
-        setCurrentDayIndex(initialIndex);
-    }, [initialIndex]);
+        if (loading || allDays.length === 0) return;
+
+        const todayKey = formatDateKey(new Date());
+        const targetKey = hasUserDraggedPagerRef.current
+            ? (currentDayKeyRef.current || todayKey)
+            : todayKey;
+
+        const targetIndex = allDays.findIndex(day => toDateKeyValue(day?.date) === targetKey);
+        if (targetIndex === -1) return;
+
+        const currentIndexSafe = Math.min(Math.max(currentDayIndex, 0), allDays.length - 1);
+        if (currentIndexSafe !== targetIndex) {
+            if (pagerRef.current?.setPageWithoutAnimation) {
+                pagerRef.current.setPageWithoutAnimation(targetIndex);
+            } else {
+                pagerRef.current?.setPage(targetIndex);
+            }
+            setCurrentDayIndex(targetIndex);
+        }
+
+        if (!hasUserDraggedPagerRef.current) {
+            setInitialIndex(targetIndex);
+        }
+    }, [loading, allDays, currentDayIndex]);
 
     useEffect(() => {
         if (!isFocused || loading) return;
@@ -973,8 +1032,7 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
     };
 
     const handleGoToToday = () => {
-        pagerRef.current?.setPage(initialIndex);
-        setCurrentDayIndex(initialIndex);
+        goToTodayFromState(true);
     };
 
     const handleOpenMonthCalendar = (date) => {
@@ -1002,8 +1060,15 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
                             style={[styles.mainPager, { height: mainPagerHeight }]}
                             initialPage={initialIndex}
                             offscreenPageLimit={1}
+                            onPageScrollStateChanged={(e) => {
+                                if (e?.nativeEvent?.pageScrollState === 'dragging') {
+                                    hasUserDraggedPagerRef.current = true;
+                                }
+                            }}
                             onPageSelected={(e) => {
-                                setCurrentDayIndex(e.nativeEvent.position);
+                                const nextIndex = e.nativeEvent.position;
+                                setCurrentDayIndex(nextIndex);
+                                currentDayKeyRef.current = allDays[nextIndex]?.date || currentDayKeyRef.current;
                             }}
                         >
                             {allDays.map((day, i) => (
