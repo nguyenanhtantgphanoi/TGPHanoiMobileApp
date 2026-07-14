@@ -7,9 +7,9 @@ export default function InfoScreen({ navigation }) {
     return (
         <View style={styles.container}>
             <WebViewDetail linkWeb={'https://www.tonggiaophanhanoi.org/luoc-su-tong-giao-phan-ha-noi/'} />
-            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            {/* <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
                 <MaterialIcons name="arrow-back" size={24} color="#000" />
-            </TouchableOpacity>
+            </TouchableOpacity> */}
         </View>
     )
 }

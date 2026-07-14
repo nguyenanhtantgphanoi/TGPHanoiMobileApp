@@ -47,6 +47,54 @@ const DEFAULT_QUICK_UTILITIES = [
 
 ];
 
+const DATE_KEY_PATTERN = /^(\d{4})-(\d{1,2})-(\d{1,2})$/;
+
+const formatLocalDateKey = (date) => {
+    if (!(date instanceof Date) || Number.isNaN(date.getTime())) return '';
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+};
+
+const parseLocalCalendarDate = (value) => {
+    if (value instanceof Date) {
+        if (Number.isNaN(value.getTime())) return null;
+        return new Date(value.getFullYear(), value.getMonth(), value.getDate());
+    }
+
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        const match = trimmed.match(DATE_KEY_PATTERN);
+        if (match) {
+            const year = Number(match[1]);
+            const month = Number(match[2]);
+            const day = Number(match[3]);
+            const parsed = new Date(year, month - 1, day);
+
+            if (
+                parsed.getFullYear() === year &&
+                parsed.getMonth() === month - 1 &&
+                parsed.getDate() === day
+            ) {
+                return parsed;
+            }
+        }
+
+        const parsed = new Date(trimmed);
+        return Number.isNaN(parsed.getTime()) ? null : parsed;
+    }
+
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const toLocalDateKey = (value) => {
+    if (typeof value === 'string') {
+        const parsedDateKey = parseLocalCalendarDate(value);
+        return parsedDateKey ? formatLocalDateKey(parsedDateKey) : '';
+    }
+
+    return formatLocalDateKey(parseLocalCalendarDate(value));
+};
+
 const GENERATED_MONTHS = [];
 for (let y = 2025; y <= 2026; y++) {
     for (let m = 0; m < 12; m++) {
@@ -60,7 +108,7 @@ for (let y = 2025; y <= 2026; y++) {
 const DayCard = memo(({ item, insets, topNavigatorOffset, setSelectedLe, setModalVisible, middleBlockReservedSpace, actionButtonColors }) => {
     const navigation = useNavigation();
     const { width: screenWidth, height: screenHeight } = useWindowDimensions();
-    const dateObj = new Date(item.date);
+    const dateObj = parseLocalCalendarDate(item.date) || new Date();
     const daysOfWeek = ['Chúa Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
     const solar = Solar.fromYmd(dateObj.getFullYear(), dateObj.getMonth() + 1, dateObj.getDate());
     const lunar = solar.getLunar();
@@ -252,7 +300,7 @@ const DayCard = memo(({ item, insets, topNavigatorOffset, setSelectedLe, setModa
                     <TouchableOpacity
                         activeOpacity={0.8}
                         onPress={() => {
-                            const date = new Date(item.date);
+                            const date = parseLocalCalendarDate(item.date) || new Date();
                             navigation.navigate('GKPVScreen', {
                                 day: date.getDate().toString(),
                                 month: (date.getMonth() + 1).toString(),
@@ -448,20 +496,11 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
     useEffect(() => { if (isFocused || modalVisible) syncSettings(); }, [isFocused, modalVisible]);
 
     const formatDateKey = (date) => {
-        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        return formatLocalDateKey(date);
     };
 
     const toDateKeyValue = (value) => {
-        if (typeof value === 'string') {
-            const trimmed = value.trim();
-            if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
-                return trimmed;
-            }
-        }
-
-        const dateValue = value instanceof Date ? value : new Date(value);
-        if (Number.isNaN(dateValue.getTime())) return '';
-        return formatDateKey(dateValue);
+        return toLocalDateKey(value);
     };
 
     const normalizeDayData = (dayData, fallbackDayKey = '') => {
@@ -490,7 +529,11 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
             mergedMap.set(normalized.date, normalized);
         });
 
-        return Array.from(mergedMap.values()).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        return Array.from(mergedMap.values()).sort((a, b) => {
+            const dateA = parseLocalCalendarDate(a.date);
+            const dateB = parseLocalCalendarDate(b.date);
+            return (dateA?.getTime() || 0) - (dateB?.getTime() || 0);
+        });
     };
 
     const buildDayCardStateFromDays = (days) => {
@@ -1000,13 +1043,11 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
     }), [fontScale, modalColors]);
 
     const toDateKey = (value) => {
-        const dateValue = value instanceof Date ? value : new Date(value);
-        if (Number.isNaN(dateValue.getTime())) return '';
-        return `${dateValue.getFullYear()}-${String(dateValue.getMonth() + 1).padStart(2, '0')}-${String(dateValue.getDate()).padStart(2, '0')}`;
+        return toLocalDateKey(value);
     };
 
     const currentDay = allDays[currentDayIndex] || allDays[initialIndex] || null;
-    const currentDate = currentDay?.date ? new Date(currentDay.date) : null;
+    const currentDate = currentDay?.date ? parseLocalCalendarDate(currentDay.date) : null;
     const isCurrentDayToday = toDateKey(currentDay?.date) === toDateKey(new Date());
     const androidTopNavigatorOffset = Platform.OS === 'android' ? 65 + insets.top : 0;
     const mainPagerHeight = Platform.OS === 'android'

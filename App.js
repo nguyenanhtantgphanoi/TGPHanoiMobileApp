@@ -21,6 +21,7 @@ import KinhCacThanhTuDaoScreen from './src/screens/KinhCacThanhTuDaoScreen';
 import ChiTietKinhScreen from './src/screens/ChiTietKinhScreen';
 import GXDetailScreen from './src/screens/GXDetailScreen';
 import VanKienCongNghiScreen from './src/screens/VanKienCongNghiScreen';
+import DangBanQuyenScreen from './src/screens/DangBanQuyenScreen';
 import LichLeNoiThanhScreen from './src/screens/LichLeNoiThanhScreen';
 import VPCacUyBanScreen from './src/screens/VPCacUyBanScreen';
 import NewsDetailScreen from './src/screens/NewsDetailScreen';
@@ -201,6 +202,7 @@ function MainApp() {
         <Stack.Screen name="KinhCacThanhTuDao" component={KinhCacThanhTuDaoScreen} />
         <Stack.Screen name="ChiTietKinh" component={ChiTietKinhScreen} />
         <Stack.Screen name="VanKienCongNghiScreen" component={VanKienCongNghiScreen} />
+        <Stack.Screen name="DangBanQuyenScreen" component={DangBanQuyenScreen} />
         <Stack.Screen name="GKPVScreen" component={GKPVScreen} />
         <Stack.Screen name="NotificationScreen" component={NotificationScreen} />
         <Stack.Screen name="SettingScreen" component={SettingScreen} />

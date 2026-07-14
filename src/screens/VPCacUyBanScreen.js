@@ -11,12 +11,12 @@ export default function VPCacUyBanScreen({ navigation }) {
     return (
         <View style={styles.container}>
             <WebViewDetail linkWeb="https://www.tonggiaophanhanoi.org/tong-giao-phan-ha-noi/" />
-            <TouchableOpacity
+            {/* <TouchableOpacity
                 onPress={() => navigation.goBack()}
                 style={[styles.backButton, { top: insets.top + 10, left: 10 }]}
             >
                 <MaterialIcons name="arrow-back" size={28} color="#000" />
-            </TouchableOpacity>
+            </TouchableOpacity> */}
         </View>
     );
 }

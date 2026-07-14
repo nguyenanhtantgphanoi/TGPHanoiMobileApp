@@ -255,14 +255,14 @@ export default function LichLeNoiThanhScreen({ navigation }) {
                 <MaterialIcons name="arrow-back" size={28} color="#000" />
             </TouchableOpacity>
 
-            {canGoBack && htmlContent && (
+            {/* {canGoBack && htmlContent && (
                 <TouchableOpacity
                     onPress={() => webViewRef.current?.goBack()}
                     style={[styles.backWebButton, { top: insets.top + 10, left: 60 }]}
                 >
                     <MaterialIcons name="navigate-before" size={28} color="#000" />
                 </TouchableOpacity>
-            )}
+            )} */}
 
             <TouchableOpacity
                 onPress={fetchHtmlContent}

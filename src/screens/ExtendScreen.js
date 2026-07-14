@@ -24,6 +24,11 @@ const menuItems = [
         screen: 'VanKienCongNghiScreen'
     },
     {
+        icon: 'key',
+        label: 'Đấng bản quyền',
+        screen: 'DangBanQuyenScreen'
+    },
+    {
         icon: 'user-friends',
         label: 'Danh sách linh mục',
         screen: 'LMScreen'
