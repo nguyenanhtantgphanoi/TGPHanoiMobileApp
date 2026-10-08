@@ -3,44 +3,37 @@ import {
     StyleSheet, Text, View, FlatList,
     ActivityIndicator, TouchableOpacity
 } from 'react-native';
-import axios from 'axios';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { getParishes } from '../apis/parishes';
 
 export default function GiaoHatScreen({ navigation }) {
     const [giaoHatList, setGiaoHatList] = useState([]);
-    const [allGiaoXu, setAllGiaoXu] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchGiaoXu = async () => {
             try {
-                const res = await axios.get('https://mapp.tgphanoi.org/api/giaoXu/');
-                if (res.data.success && Array.isArray(res.data.data)) {
-                    const all = res.data.data;
-                    setAllGiaoXu(all);
+                const all = await getParishes();
 
-                    const giaoHatMap = {};
-                    all.forEach(item => {
-                        const giaoHat = item.giaoHat?.trim();
-                        if (giaoHat) {
-                            if (!giaoHatMap[giaoHat]) {
-                                giaoHatMap[giaoHat] = 1;
-                            } else {
-                                giaoHatMap[giaoHat]++;
-                            }
-                        }
-                    });
+                const giaoHatMap = {};
+                all.forEach(item => {
+                    const giaoHat = item.deaneryName?.trim();
+                    if (!giaoHat) return;
+                    if (!giaoHatMap[giaoHat]) {
+                        giaoHatMap[giaoHat] = 1;
+                    } else {
+                        giaoHatMap[giaoHat] += 1;
+                    }
+                });
 
-                    const giaoHatArray = Object.entries(giaoHatMap)
-                        .map(([giaoHat, count]) => ({ giaoHat, count }))
-                        .sort((a, b) => a.giaoHat.localeCompare(b.giaoHat));
+                const giaoHatArray = Object.entries(giaoHatMap)
+                    .map(([giaoHat, count]) => ({ giaoHat, count }))
+                    .sort((a, b) => a.giaoHat.localeCompare(b.giaoHat, 'vi'));
 
-                    setGiaoHatList(giaoHatArray);
-                } else {
-                    console.warn('Không lấy được danh sách giáo xứ:', res.data);
-                }
+                setGiaoHatList(giaoHatArray);
             } catch (err) {
-                console.error('Lỗi khi fetch giáo xứ:', err.message);
+                console.error('Lỗi khi fetch giáo xứ:', err);
+                setGiaoHatList([]);
             } finally {
                 setLoading(false);
             }
@@ -58,7 +51,6 @@ export default function GiaoHatScreen({ navigation }) {
     }
 
     const handlePress = (giaoHat) => {
-        const filtered = allGiaoXu.filter(item => item.giaoHat?.trim() === giaoHat);
         navigation.navigate('GiaoXuScreen', { giaoHat });
     };
 

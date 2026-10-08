@@ -10,9 +10,9 @@ import {
     Keyboard,
     TouchableWithoutFeedback,
 } from 'react-native';
-import axios from 'axios';
 import { FontAwesome5 } from '@expo/vector-icons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { getParishes } from '../apis/parishes';
 
 export default function GiaoXuScreen({ route, navigation }) {
     const [allGiaoXu, setAllGiaoXu] = useState([]);
@@ -24,14 +24,11 @@ export default function GiaoXuScreen({ route, navigation }) {
     useEffect(() => {
         const fetchGiaoXu = async () => {
             try {
-                const res = await axios.get('https://mapp.tgphanoi.org/api/giaoXu/');
-                if (res.data.success && Array.isArray(res.data.data)) {
-                    setAllGiaoXu(res.data.data);
-                } else {
-                    console.warn('Không lấy được danh sách giáo xứ:', res.data);
-                }
+                const parishes = await getParishes();
+                setAllGiaoXu(parishes);
             } catch (err) {
-                console.error('Lỗi khi fetch giáo xứ:', err.message);
+                console.error('Lỗi khi fetch giáo xứ:', err);
+                setAllGiaoXu([]);
             } finally {
                 setLoading(false);
             }
@@ -42,12 +39,12 @@ export default function GiaoXuScreen({ route, navigation }) {
 
     const filteredGiaoXu = allGiaoXu.filter(item => {
         const matchGiaoHat = giaoHatFromParams
-            ? item.giaoHat?.trim() === giaoHatFromParams
+            ? (item.deaneryName?.trim() === giaoHatFromParams || item.giaoHat?.trim() === giaoHatFromParams)
             : true;
 
         const keyword = searchText.toLowerCase();
-        const tenGX = item.tenGX?.toLowerCase() || '';
-        const tenKhac = item.tenKhac?.toLowerCase() || '';
+        const tenGX = item.name?.toLowerCase() || item.tenGX?.toLowerCase() || '';
+        const tenKhac = item.ten_khac?.toLowerCase() || item.tenKhac?.toLowerCase() || '';
         const matchSearch = tenGX.includes(keyword) || tenKhac.includes(keyword);
 
         return matchGiaoHat && matchSearch;
@@ -57,14 +54,14 @@ export default function GiaoXuScreen({ route, navigation }) {
         <TouchableOpacity
             style={styles.card}
             onPress={() =>
-                item.link ? navigation.navigate('GXDetailScreen', { link: item.link }) : null
+                item.href ? navigation.navigate('GXDetailScreen', { link: item.href }) : null
             }
             activeOpacity={0.7}
         >
-            <Text style={styles.name}>Giáo xứ {item.tenGX}</Text>
-            <Text style={styles.sub}>Tên khác: {item.tenKhac || ''}</Text>
-            {item.giaoHat ? <Text style={styles.sub}>Giáo hạt: {item.giaoHat}</Text> : null}
-            {item.diaChi ? <Text style={styles.sub}>Địa chỉ: {item.diaChi}</Text> : null}
+            <Text style={styles.name}>Giáo xứ {item.name}</Text>
+            {item.ten_khac ? <Text style={styles.sub}>Tên khác: {item.ten_khac}</Text> : null}
+            <Text style={styles.sub}>Giáo hạt: {item.deaneryName || ''}</Text>
+            <Text style={styles.sub}>Địa chỉ: {item.dia_chi || ''}</Text>
         </TouchableOpacity>
     );
 
@@ -114,7 +111,7 @@ export default function GiaoXuScreen({ route, navigation }) {
                 ) : (
                     <FlatList
                         data={filteredGiaoXu}
-                        keyExtractor={(item, index) => item.tenGX + index}
+                        keyExtractor={(item, index) => item.id ?? String(index)}
                         renderItem={renderItem}
                         contentContainerStyle={{ paddingVertical: 12 }}
                         keyboardShouldPersistTaps="handled"

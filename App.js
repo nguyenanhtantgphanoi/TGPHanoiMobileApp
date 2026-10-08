@@ -8,6 +8,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
 import axios from 'axios';
 import * as Notifications from 'expo-notifications';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { setupNotificationChannel } from './src/utils/notificationChannel';
 import { registerForPushNotifications } from './src/utils/pushToken';
@@ -32,6 +33,7 @@ import { useUpdateVersion } from './src/hooks/useUpdateVersion';
 import { UpdateOverlay } from './src/components/UpdateOverlay';
 
 const Stack = createNativeStackNavigator();
+const LAST_HANDLED_NOTIFICATION_ID_KEY = '@last_handled_notification_id';
 const VALID_STACK_SCREENS = new Set([
   'HomeBottomTabNavigator',
   'InfoScreen',
@@ -53,6 +55,7 @@ const VALID_STACK_SCREENS = new Set([
 function MainApp() {
   const navigationRef = useNavigationContainerRef();
   const handledResponseIdsRef = useRef(new Set());
+  const restoredLastHandledIdRef = useRef('');
 
   const navigateFromNotificationData = (data = {}) => {
     const fallbackScreen = 'NotificationScreen';
@@ -127,11 +130,17 @@ function MainApp() {
     };
 
     if (requestId && handledResponseIdsRef.current.has(requestId)) return;
+    if (requestId && restoredLastHandledIdRef.current === requestId) return;
     if (requestId) handledResponseIdsRef.current.add(requestId);
+    if (requestId) {
+      restoredLastHandledIdRef.current = requestId;
+      AsyncStorage.setItem(LAST_HANDLED_NOTIFICATION_ID_KEY, requestId).catch(() => { });
+    }
 
     const tryNavigate = () => {
       if (navigationRef.isReady()) {
         navigateFromNotificationData(data);
+        Notifications.clearLastNotificationResponseAsync().catch(() => { });
       } else {
         setTimeout(tryNavigate, 200);
       }
@@ -169,13 +178,22 @@ function MainApp() {
   }, []);
 
   useEffect(() => {
+    AsyncStorage.getItem(LAST_HANDLED_NOTIFICATION_ID_KEY)
+      .then((savedRequestId) => {
+        restoredLastHandledIdRef.current = savedRequestId || '';
+      })
+      .catch(() => { });
+
     const subscription = Notifications.addNotificationResponseReceivedListener(
       handleNotificationResponse,
     );
 
     Notifications.getLastNotificationResponseAsync()
-      .then((response) => {
+      .then(async (response) => {
         if (response) handleNotificationResponse(response);
+        try {
+          await Notifications.clearLastNotificationResponseAsync();
+        } catch { }
       })
       .catch((error) => {
         console.log('Get last notification response failed:', error);

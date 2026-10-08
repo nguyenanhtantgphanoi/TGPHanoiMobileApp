@@ -46,6 +46,11 @@ const DEFAULT_ACTION_BUTTON_COLORS = {
 const DEFAULT_QUICK_UTILITIES = [
 
 ];
+const getBaseMainPagerHeight = (screenHeight, platformOS) => (
+    platformOS === 'android'
+        ? Math.max(500, Math.floor(screenHeight * 0.82))
+        : Math.max(420, Math.floor(screenHeight * 0.74))
+);
 
 const DATE_KEY_PATTERN = /^(\d{4})-(\d{1,2})-(\d{1,2})$/;
 
@@ -105,7 +110,7 @@ for (let y = 2025; y <= 2026; y++) {
     }
 }
 
-const DayCard = memo(({ item, insets, topNavigatorOffset, setSelectedLe, setModalVisible, middleBlockReservedSpace, actionButtonColors }) => {
+const DayCard = memo(({ item, insets, topNavigatorOffset, setSelectedLe, setModalVisible, middleBlockReservedSpace, actionButtonColors, onCardHeightChange }) => {
     const navigation = useNavigation();
     const { width: screenWidth, height: screenHeight } = useWindowDimensions();
     const dateObj = parseLocalCalendarDate(item.date) || new Date();
@@ -167,10 +172,6 @@ const DayCard = memo(({ item, insets, topNavigatorOffset, setSelectedLe, setModa
     const reservedDotsHeight = listLe.length > 1
         ? Math.max(18, dotsMeasuredHeight)
         : 0;
-    const baseMaxPagerHeight = Math.floor(screenHeight * (isVeryShort ? 0.54 : (isCompactHeight ? 0.6 : 0.68)));
-    const safetyReserve = hasXuChauLuot ? (isVeryShort ? 26 : 20) : 8;
-    const maxPagerHeight = Math.max(100, baseMaxPagerHeight - reservedXuChauLuotHeight - reservedDotsHeight - safetyReserve);
-
     const estimatedPageHeights = useMemo(() => {
         const horizontalPadding = isVerySmall ? 10 : 15;
         const textWidth = Math.max(150, responsiveBottomWidth - horizontalPadding * 2 - 20);
@@ -206,23 +207,16 @@ const DayCard = memo(({ item, insets, topNavigatorOffset, setSelectedLe, setModa
         });
     }, [listLe, item.bd_1, item.bd_2, item.tin_mung, responsiveBottomWidth, isVerySmall, isVeryShort]);
 
-    const adaptiveTextScale = useMemo(() => {
-        const currentEstimated = estimatedPageHeights[activeLeIndex] ?? estimatedPageHeights[0] ?? 0;
-        if (!currentEstimated || currentEstimated <= maxPagerHeight) return 1;
-        const minScale = isVeryShort ? 0.82 : 0.86;
-        return Math.max(minScale, Math.min(1, maxPagerHeight / currentEstimated));
-    }, [activeLeIndex, estimatedPageHeights, maxPagerHeight, isVeryShort]);
-
-    const scaledTitleFontSize = Math.max(14, (isVerySmall ? 17 : 20) * adaptiveTextScale);
-    const scaledSummaryFontSize = Math.max(12, (isVerySmall ? 14 : 16) * adaptiveTextScale);
-    const scaledQuoteFontSize = Math.max(12, (isVerySmall ? 14 : 16) * adaptiveTextScale);
+    const scaledTitleFontSize = isVerySmall ? 17 : 20;
+    const scaledSummaryFontSize = isVerySmall ? 14 : 16;
+    const scaledQuoteFontSize = isVerySmall ? 14 : 16;
 
     const getPagerHeightForPage = (pageIndex, fallbackHeight) => {
         const estimatedHeight = estimatedPageHeights[pageIndex] ?? 0;
         const measuredHeight = pageContentHeights[pageIndex] ?? fallbackHeight;
         const rawHeight = Math.max(estimatedHeight, measuredHeight || 0);
         if (!rawHeight) return 0;
-        return Math.min(maxPagerHeight, rawHeight);
+        return rawHeight;
     };
 
     // Measure page content so PagerView keeps a stable height and inner content can scroll if needed.
@@ -244,17 +238,11 @@ const DayCard = memo(({ item, insets, topNavigatorOffset, setSelectedLe, setModa
     };
 
     useEffect(() => {
-        if (contentHeight > maxPagerHeight) {
-            setContentHeight(maxPagerHeight);
-        }
-    }, [contentHeight, maxPagerHeight]);
-
-    useEffect(() => {
         const nextHeight = getPagerHeightForPage(activeLeIndex);
         if (nextHeight !== contentHeight) {
             setContentHeight(nextHeight);
         }
-    }, [activeLeIndex, pageContentHeights, estimatedPageHeights, maxPagerHeight]);
+    }, [activeLeIndex, pageContentHeights, estimatedPageHeights]);
 
     const lunarChi = ["Thân", "Dậu", "Tuất", "Hợi", "Tý", "Sửu", "Dần", "Mão", "Thìn", "Tỵ", "Ngọ", "Mùi"]
     const lunarCan = ["Canh", "Tân", "Nhâm", "Quý", "Giáp", "Ất", "Bính", "Đinh", "Mậu", "Kỷ"]
@@ -264,9 +252,16 @@ const DayCard = memo(({ item, insets, topNavigatorOffset, setSelectedLe, setModa
             style={[
                 styles.page,
                 styles.container_x,
+                { flex: 0 },
                 Platform.OS === 'android' && { paddingTop: topNavigatorOffset },
                 (isVeryShort || isCompactHeight) && { justifyContent: 'flex-start' }
             ]}
+            onLayout={(event) => {
+                const measuredHeight = Math.ceil(event.nativeEvent.layout.height || 0);
+                if (measuredHeight && onCardHeightChange) {
+                    onCardHeightChange(item.date, measuredHeight);
+                }
+            }}
         >
             <View
                 style={[
@@ -456,6 +451,8 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
     const [quickUtilityHtmlTitle, setQuickUtilityHtmlTitle] = useState('Tiện ích');
     const [quickUtilityHtmlContent, setQuickUtilityHtmlContent] = useState('');
     const [showUtilitySwipeHint, setShowUtilitySwipeHint] = useState(false);
+    const [mainPagerHeight, setMainPagerHeight] = useState(getBaseMainPagerHeight(screenHeight, Platform.OS));
+    const [dayCardHeights, setDayCardHeights] = useState({});
     const updatedAtCheckedDayKeysRef = useRef(new Set());
     const hasUserDraggedPagerRef = useRef(false);
     const currentDayKeyRef = useRef('');
@@ -1050,12 +1047,31 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
     const currentDate = currentDay?.date ? parseLocalCalendarDate(currentDay.date) : null;
     const isCurrentDayToday = toDateKey(currentDay?.date) === toDateKey(new Date());
     const androidTopNavigatorOffset = Platform.OS === 'android' ? 65 + insets.top : 0;
-    const mainPagerHeight = Platform.OS === 'android'
-        ? Math.max(500, Math.floor(screenHeight * 0.82))
-        : Math.max(420, Math.floor(screenHeight * 0.74));
+    const baseMainPagerHeight = getBaseMainPagerHeight(screenHeight, Platform.OS);
 
     const middleBlockReservedSpace = 10;
     const middleButtonFontSize = screenHeight < 720 ? 12 : 13;
+
+    useEffect(() => {
+        setMainPagerHeight(baseMainPagerHeight);
+    }, [baseMainPagerHeight]);
+
+    useEffect(() => {
+        setDayCardHeights({});
+    }, [allDays]);
+
+    const handleDayCardHeightChange = (dayKey, measuredHeight) => {
+        if (!dayKey || !measuredHeight) return;
+        setDayCardHeights((prev) => {
+            if (prev[dayKey] === measuredHeight) return prev;
+            return { ...prev, [dayKey]: measuredHeight };
+        });
+
+        const currentDayKey = allDays[currentDayIndex]?.date;
+        if (currentDayKey === dayKey) {
+            setMainPagerHeight(Math.max(baseMainPagerHeight, measuredHeight));
+        }
+    };
 
     const handleOpenQuickUtility = (item) => {
         if (!item) return;
@@ -1109,7 +1125,9 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
                             onPageSelected={(e) => {
                                 const nextIndex = e.nativeEvent.position;
                                 setCurrentDayIndex(nextIndex);
-                                currentDayKeyRef.current = allDays[nextIndex]?.date || currentDayKeyRef.current;
+                                const nextDayKey = allDays[nextIndex]?.date;
+                                currentDayKeyRef.current = nextDayKey || currentDayKeyRef.current;
+                                setMainPagerHeight(Math.max(baseMainPagerHeight, dayCardHeights[nextDayKey] || 0));
                             }}
                         >
                             {allDays.map((day, i) => (
@@ -1122,6 +1140,7 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
                                         setModalVisible={setModalVisible}
                                         middleBlockReservedSpace={middleBlockReservedSpace}
                                         actionButtonColors={actionButtonColors}
+                                        onCardHeightChange={handleDayCardHeightChange}
                                     />
                                 </View>
                             ))}

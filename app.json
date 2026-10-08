@@ -2,7 +2,7 @@
   "expo": {
     "name": "TGP Hà Nội",
     "slug": "tgp-hn",
-    "version": "1.1.4",
+    "version": "1.1.5",
     "orientation": "portrait",
     "icon": "./assets/icon-tgp.png",
     "userInterfaceStyle": "light",
@@ -41,8 +41,7 @@
       "policy": "appVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/e0975607-6324-4a5d-98a9-34103e8c76da",
-      "channel": "production"
+      "url": "https://u.expo.dev/e0975607-6324-4a5d-98a9-34103e8c76da"
     }
   }
 }
