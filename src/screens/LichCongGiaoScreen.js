@@ -100,16 +100,6 @@ const toLocalDateKey = (value) => {
     return formatLocalDateKey(parseLocalCalendarDate(value));
 };
 
-const GENERATED_MONTHS = [];
-for (let y = 2025; y <= 2026; y++) {
-    for (let m = 0; m < 12; m++) {
-        const d = new Date(y, m, 1);
-        if (d >= new Date(2025, 11, 1) && d <= new Date(2026, 10, 1)) {
-            GENERATED_MONTHS.push({ month: m, year: y });
-        }
-    }
-}
-
 const DayCard = memo(({ item, insets, topNavigatorOffset, setSelectedLe, setModalVisible, middleBlockReservedSpace, actionButtonColors, onCardHeightChange }) => {
     const navigation = useNavigation();
     const { width: screenWidth, height: screenHeight } = useWindowDimensions();
@@ -456,6 +446,43 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
     const updatedAtCheckedDayKeysRef = useRef(new Set());
     const hasUserDraggedPagerRef = useRef(false);
     const currentDayKeyRef = useRef('');
+    const generatedMonths = useMemo(() => {
+        const monthMap = new Map();
+
+        const collectMonth = (value) => {
+            const parsedDate = parseLocalCalendarDate(value);
+            if (!parsedDate) return;
+
+            const year = parsedDate.getFullYear();
+            const month = parsedDate.getMonth();
+            const key = `${year}-${String(month + 1).padStart(2, '0')}`;
+
+            if (!monthMap.has(key)) {
+                monthMap.set(key, { month, year });
+            }
+        };
+
+        if (Array.isArray(yearData)) {
+            yearData.forEach((item) => {
+                collectMonth(item?.date);
+            });
+        }
+
+        if (monthMap.size === 0 && Array.isArray(allDays)) {
+            allDays.forEach((item) => {
+                collectMonth(item?.date);
+            });
+        }
+
+        const months = Array.from(monthMap.values()).sort(
+            (a, b) => (a.year - b.year) || (a.month - b.month)
+        );
+
+        if (months.length > 0) return months;
+
+        const now = new Date();
+        return [{ month: now.getMonth(), year: now.getFullYear() }];
+    }, [yearData, allDays]);
 
     function goToTodayFromState(animated = false) {
         const todayKey = formatDateKey(new Date());
@@ -987,7 +1014,7 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
         const targetDate = date instanceof Date ? date : new Date();
         if (Number.isNaN(targetDate.getTime())) return;
 
-        const idx = GENERATED_MONTHS.findIndex(
+        const idx = generatedMonths.findIndex(
             m => m.month === targetDate.getMonth() && m.year === targetDate.getFullYear()
         );
         setMonthPagerIndex(idx !== -1 ? idx : 0);
@@ -1094,7 +1121,7 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
 
     const handleOpenMonthCalendar = (date) => {
         const targetDate = date instanceof Date ? date : new Date();
-        const idx = GENERATED_MONTHS.findIndex(
+        const idx = generatedMonths.findIndex(
             m => m.month === targetDate.getMonth() && m.year === targetDate.getFullYear()
         );
         setMonthPagerIndex(idx !== -1 ? idx : 0);
@@ -1237,7 +1264,7 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
                             visible={monthModalVisible}
                             onClose={() => setMonthModalVisible(false)}
                             insets={insets}
-                            GENERATED_MONTHS={GENERATED_MONTHS}
+                            GENERATED_MONTHS={generatedMonths}
                             monthPagerIndex={monthPagerIndex}
                             setMonthPagerIndex={setMonthPagerIndex}
                             clickedDate={clickedDate}
