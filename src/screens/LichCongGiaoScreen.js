@@ -45,16 +45,6 @@ const DEFAULT_QUICK_UTILITIES = [
 
 ];
 
-const GENERATED_MONTHS = [];
-for (let y = 2025; y <= 2026; y++) {
-    for (let m = 0; m < 12; m++) {
-        const d = new Date(y, m, 1);
-        if (d >= new Date(2025, 11, 1) && d <= new Date(2026, 10, 1)) {
-            GENERATED_MONTHS.push({ month: m, year: y });
-        }
-    }
-}
-
 const DayCard = memo(({ item, insets, topNavigatorOffset, setSelectedLe, setModalVisible, middleBlockReservedSpace, actionButtonColors }) => {
     const navigation = useNavigation();
     const { width: screenWidth, height: screenHeight } = useWindowDimensions();
@@ -407,6 +397,50 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
     const [quickUtilityHtmlContent, setQuickUtilityHtmlContent] = useState('');
     const [showUtilitySwipeHint, setShowUtilitySwipeHint] = useState(false);
 
+    const generatedMonths = useMemo(() => {
+        const parseMonthYear = (value) => {
+            if (typeof value !== 'string') return null;
+            const [yearRaw, monthRaw] = value.split('-');
+            const year = Number(yearRaw);
+            const month = Number(monthRaw);
+            if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) return null;
+            return { year, month: month - 1 };
+        };
+
+        const monthMap = new Map();
+
+        if (Array.isArray(yearData)) {
+            yearData.forEach((item) => {
+                const parsedDate = parseMonthYear(item?.date);
+                if (!parsedDate) return;
+                const key = `${parsedDate.year}-${String(parsedDate.month + 1).padStart(2, '0')}`;
+                if (!monthMap.has(key)) {
+                    monthMap.set(key, { year: parsedDate.year, month: parsedDate.month });
+                }
+            });
+        }
+
+        if (monthMap.size === 0 && Array.isArray(allDays)) {
+            allDays.forEach((item) => {
+                const parsedDate = parseMonthYear(item?.date);
+                if (!parsedDate) return;
+                const key = `${parsedDate.year}-${String(parsedDate.month + 1).padStart(2, '0')}`;
+                if (!monthMap.has(key)) {
+                    monthMap.set(key, { year: parsedDate.year, month: parsedDate.month });
+                }
+            });
+        }
+
+        const months = Array.from(monthMap.values()).sort(
+            (a, b) => (a.year - b.year) || (a.month - b.month)
+        );
+
+        if (months.length > 0) return months;
+
+        const now = new Date();
+        return [{ year: now.getFullYear(), month: now.getMonth() }];
+    }, [yearData, allDays]);
+
     useImperativeHandle(ref, () => ({ goToToday: () => pagerRef.current?.setPage(initialIndex) }));
     const syncSettings = async () => {
         try {
@@ -714,7 +748,7 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
         const targetDate = date instanceof Date ? date : new Date();
         if (Number.isNaN(targetDate.getTime())) return;
 
-        const idx = GENERATED_MONTHS.findIndex(
+        const idx = generatedMonths.findIndex(
             m => m.month === targetDate.getMonth() && m.year === targetDate.getFullYear()
         );
         setMonthPagerIndex(idx !== -1 ? idx : 0);
@@ -805,7 +839,7 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
 
     const handleOpenMonthCalendar = (date) => {
         const targetDate = date instanceof Date ? date : new Date();
-        const idx = GENERATED_MONTHS.findIndex(
+        const idx = generatedMonths.findIndex(
             m => m.month === targetDate.getMonth() && m.year === targetDate.getFullYear()
         );
         setMonthPagerIndex(idx !== -1 ? idx : 0);
@@ -938,7 +972,7 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
                             visible={monthModalVisible}
                             onClose={() => setMonthModalVisible(false)}
                             insets={insets}
-                            GENERATED_MONTHS={GENERATED_MONTHS}
+                            GENERATED_MONTHS={generatedMonths}
                             monthPagerIndex={monthPagerIndex}
                             setMonthPagerIndex={setMonthPagerIndex}
                             clickedDate={clickedDate}
