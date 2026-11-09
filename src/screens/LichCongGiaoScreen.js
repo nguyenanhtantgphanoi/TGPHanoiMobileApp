@@ -25,6 +25,7 @@ import RenderHTML from "react-native-render-html";
 import { useIsFocused, useNavigation, useRoute } from '@react-navigation/native';
 import MonthCalendarModal from '../components/MonthCalendarModal';
 import { Ionicons } from '@expo/vector-icons';
+import { fetchDataVersions, isCacheVersionStale } from '../utils/dataVersions';
 
 const { width, height } = Dimensions.get('window');
 const FONT_SCALE_KEY = "@kinh_font_scale";
@@ -32,6 +33,8 @@ const DARK_MODE_KEY = "@kinh_dark_mode";
 const UTILITY_SWIPE_HINT_SEEN_KEY = "@utility_swipe_hint_seen";
 const DAYCARD_CACHE_KEY_PREFIX = "@lich_cong_giao_daycard_cache:";
 const CALENDAR_YEAR_CACHE_KEY = "@lich_cong_giao_calendar_year_cache";
+const DAYCARD_VERSION_KEY = 'lichCongGiaoDaycardVersion';
+const CALENDAR_YEAR_VERSION_KEY = 'lichCongGiaoYearVersion';
 const DAYCARD_CACHE_TTL_MS = 50*24 * 60 * 60 * 1000;
 const BACKGROUND_DAYCARD_OFFSETS = [-6, -5, -4, -3, -2, -1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
 const QUICK_UTILITY_API_URL = 'https://mapp.tgphanoi.org/get-quick-utilities-v2';
@@ -444,6 +447,8 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
     const [mainPagerHeight, setMainPagerHeight] = useState(getBaseMainPagerHeight(screenHeight, Platform.OS));
     const [dayCardHeights, setDayCardHeights] = useState({});
     const updatedAtCheckedDayKeysRef = useRef(new Set());
+    const dataVersionsPromiseRef = useRef(null);
+    const dataVersionsRef = useRef(null);
     const hasUserDraggedPagerRef = useRef(false);
     const currentDayKeyRef = useRef('');
     const generatedMonths = useMemo(() => {
@@ -572,6 +577,16 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
 
     const buildDayCardCacheKey = (dayKey) => `${DAYCARD_CACHE_KEY_PREFIX}${dayKey}`;
 
+    const getDataVersions = async () => {
+        if (!dataVersionsPromiseRef.current) {
+            dataVersionsPromiseRef.current = fetchDataVersions().then((versions) => {
+                dataVersionsRef.current = versions;
+                return versions;
+            });
+        }
+        return dataVersionsPromiseRef.current;
+    };
+
     const readCachedDay = async (dayKey) => {
         try {
             const raw = await AsyncStorage.getItem(buildDayCardCacheKey(dayKey));
@@ -594,6 +609,7 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
 
             return {
                 dayData: normalizedDay,
+                version: parsed.version || '',
                 cachedUpdatedAt: cachedUpdatedAt ? String(cachedUpdatedAt) : '',
                 isExpired: Number.isNaN(ageMs) || ageMs >= DAYCARD_CACHE_TTL_MS,
             };
@@ -617,6 +633,7 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
                 JSON.stringify({
                     cachedAt: Date.now(),
                     updatedAt: nextUpdatedAt ? String(nextUpdatedAt) : '',
+                    version: dataVersionsRef.current?.[DAYCARD_VERSION_KEY] || undefined,
                     dayData: normalizedDay,
                 })
             );
@@ -679,7 +696,11 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
     const getDayFromCacheOrApi = async (dayKey) => {
         const cached = await readCachedDay(dayKey);
 
-        if (cached?.dayData && !cached.isExpired) {
+        const versionStale = cached && isCacheVersionStale(
+            cached.version,
+            dataVersionsRef.current?.[DAYCARD_VERSION_KEY]
+        );
+        if (cached?.dayData && !cached.isExpired && !versionStale) {
             refreshCachedDayIfStale(dayKey, cached.cachedUpdatedAt).catch(() => { });
             return cached.dayData;
         }
@@ -718,7 +739,10 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
 
         const validCacheChecks = dayKeys
             .map((dayKey, index) => ({ dayKey, entry: cachedEntries[index] }))
-            .filter(({ entry }) => entry?.dayData && !entry.isExpired);
+            .filter(({ entry }) => entry?.dayData && !entry.isExpired && !isCacheVersionStale(
+                entry.version,
+                dataVersionsRef.current?.[DAYCARD_VERSION_KEY]
+            ));
 
         validCacheChecks.forEach(({ dayKey, entry }) => {
             refreshCachedDayIfStale(dayKey, entry.cachedUpdatedAt).catch(() => { });
@@ -733,7 +757,10 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
 
         const keysToFetch = dayKeys.filter((_, index) => {
             const entry = cachedEntries[index];
-            return !(entry?.dayData && !entry.isExpired);
+            return !(entry?.dayData && !entry.isExpired && !isCacheVersionStale(
+                entry.version,
+                dataVersionsRef.current?.[DAYCARD_VERSION_KEY]
+            ));
         });
 
         if (keysToFetch.length === 0) {
@@ -757,6 +784,7 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
 
     const fetchData = async () => {
         try {
+            await getDataVersions();
             const todayKey = formatDateKey(new Date());
             const todayDay = await getDayFromCacheOrApi(todayKey);
 
@@ -779,14 +807,19 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
         let usedValidCache = false;
 
         try {
+            await getDataVersions();
             const rawCache = await AsyncStorage.getItem(CALENDAR_YEAR_CACHE_KEY);
             if (rawCache) {
                 const parsed = JSON.parse(rawCache);
                 const cachedData = Array.isArray(parsed?.data) ? parsed.data : null;
                 const ageMs = Date.now() - Number(parsed?.cachedAt);
                 const isExpired = Number.isNaN(ageMs) || ageMs >= DAYCARD_CACHE_TTL_MS;
+                const isVersionStale = isCacheVersionStale(
+                    parsed?.version,
+                    dataVersionsRef.current?.[CALENDAR_YEAR_VERSION_KEY]
+                );
 
-                if (cachedData?.length && !isExpired) {
+                if (cachedData?.length && !isExpired && !isVersionStale) {
                     setYearData(cachedData);
                     usedValidCache = true;
                 }
@@ -806,6 +839,7 @@ const LichCongGiaoScreen = forwardRef((props, ref) => {
                     CALENDAR_YEAR_CACHE_KEY,
                     JSON.stringify({
                         cachedAt: Date.now(),
+                        version: dataVersionsRef.current?.[CALENDAR_YEAR_VERSION_KEY] || undefined,
                         data: res.data,
                     })
                 );

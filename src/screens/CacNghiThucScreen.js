@@ -11,6 +11,7 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { fetchDataVersions, isCacheVersionStale } from '../utils/dataVersions';
 
 const ANDROID_TOP_TAB_HEIGHT = 65;
 const NGHI_THUC_API_URL = 'https://mapp.tgphanoi.org/get-nghi-thuc-grouped';
@@ -18,11 +19,13 @@ const NGHI_THUC_API_URL = 'https://mapp.tgphanoi.org/get-nghi-thuc-grouped';
 const NGHI_THUC_UPDATED_AT_API_URL = 'https://mapp.tgphanoi.org/get-nghi-thuc-updated-at';
 const NGHI_THUC_CACHE_KEY = '@nghi_thuc_grouped_cache';
 const NGHI_THUC_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+const NGHI_THUC_VERSION_KEY = 'nghiThucVersion';
 
 export default function CacNghiThucScreen({ navigation }) {
     const [listKinhNguyen, setListKinhNguyen] = useState([])
     const [expandedId, setExpandedId] = useState(null)
     const updatedAtCheckedRef = useRef(false);
+    const dataVersionRef = useRef(null);
     const insets = useSafeAreaInsets();
     const androidTopSpacing = Platform.OS === 'android' ? ANDROID_TOP_TAB_HEIGHT + insets.top + 15 : 60;
 
@@ -59,6 +62,7 @@ export default function CacNghiThucScreen({ navigation }) {
             const ageMs = Date.now() - Number(parsed.cachedAt);
             return {
                 data: parsed.data,
+                version: parsed.version || '',
                 updatedAt: parsed.updatedAt ? String(parsed.updatedAt) : '',
                 isExpired: Number.isNaN(ageMs) || ageMs >= NGHI_THUC_CACHE_TTL_MS,
             };
@@ -74,6 +78,7 @@ export default function CacNghiThucScreen({ navigation }) {
                 JSON.stringify({
                     cachedAt: Date.now(),
                     updatedAt: updatedAt ? String(updatedAt) : '',
+                    version: dataVersionRef.current || undefined,
                     data,
                 })
             );
@@ -111,9 +116,12 @@ export default function CacNghiThucScreen({ navigation }) {
 
         const getListKinhnguyen = async () => {
             try {
+                const versions = await fetchDataVersions();
+                dataVersionRef.current = versions?.[NGHI_THUC_VERSION_KEY] || null;
                 const cache = await readGroupedCache();
 
-                if (cache?.data !== undefined && !cache.isExpired) {
+                const versionStale = cache && isCacheVersionStale(cache.version, dataVersionRef.current);
+                if (cache?.data !== undefined && !cache.isExpired && !versionStale) {
                     if (mounted) setListKinhNguyen(cache.data);
                     refreshCacheIfStale(cache.updatedAt, (freshData) => {
                         if (mounted) setListKinhNguyen(freshData);
@@ -125,7 +133,16 @@ export default function CacNghiThucScreen({ navigation }) {
                     await AsyncStorage.removeItem(NGHI_THUC_CACHE_KEY);
                 }
 
-                const data = await fetchGroupedDataFromApi();
+                let data;
+                try {
+                    data = await fetchGroupedDataFromApi();
+                } catch (error) {
+                    if (cache?.data !== undefined && mounted) {
+                        setListKinhNguyen(cache.data);
+                        return;
+                    }
+                    throw error;
+                }
                 if (mounted) {
                     setListKinhNguyen(data)
                 }
